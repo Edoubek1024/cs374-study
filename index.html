@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>CS 374 Study</title>
+  <meta name="description" content="Lessons, quizzes, flashcards and auto-graded practice for UIUC CS 374.">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.js"></script>
+  <link rel="stylesheet" href="css/style.css">
+  <script>try { var t = JSON.parse(localStorage.getItem('cs374-study-v1') || '{}').settings; if (t && t.theme) document.documentElement.setAttribute('data-theme', t.theme); } catch (e) {}</script>
+</head>
+<body>
+  <div class="topbar"><button class="btn sm" id="menuBtn" aria-label="Open menu">☰</button><b>CS 374 Study</b></div>
+  <div class="app">
+    <aside id="sidebar" aria-label="Navigation"></aside>
+    <main id="main"><p class="muted">Loading…</p></main>
+  </div>
+
+  <!-- engines -->
+  <script src="js/core/md.js"></script>
+  <script src="js/core/automata.js"></script>
+  <script src="js/core/cfg.js"></script>
+  <script src="js/core/tm.js"></script>
+  <script src="js/core/grader.js"></script>
+  <script src="js/core/graphalgo.js"></script>
+  <script src="js/core/dpviz.js"></script>
+  <script src="js/core/drills.js"></script>
+
+  <!-- content: each file calls CS374.topic({...}) -->
+  <script>window.CS374 = { topics: [], topic: function (t) { this.topics.push(t); } };</script>
+  <script src="content/strings.js"></script>
+  <script src="content/regex.js"></script>
+  <script src="content/dfa.js"></script>
+  <script src="content/nfa.js"></script>
+  <script src="content/closure.js"></script>
+  <script src="content/nonregular.js"></script>
+  <script src="content/cfg.js"></script>
+  <script src="content/tm.js"></script>
+  <script src="content/undecidable.js"></script>
+  <script src="content/recursion.js"></script>
+  <script src="content/divide.js"></script>
+  <script src="content/backtracking.js"></script>
+  <script src="content/dp.js"></script>
+  <script src="content/dp2.js"></script>
+  <script src="content/graphs.js"></script>
+  <script src="content/dags.js"></script>
+  <script src="content/shortest.js"></script>
+  <script src="content/mst.js"></script>
+  <script src="content/np.js"></script>
+
+  <!-- UI -->
+  <script src="js/ui/draw.js"></script>
+  <script src="js/ui/widgets.js"></script>
+  <script src="js/ui/labs.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
