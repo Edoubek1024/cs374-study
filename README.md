@@ -62,7 +62,7 @@ Lessons include **"try it first" worked examples**: the solution stays hidden un
   - *Graph Algorithms Lab:* BFS, DFS with edge types, topological sort, SCCs, Dijkstra, Bellman–Ford, DAG paths, Prim, Kruskal and Floyd–Warshall, step by step.
   - *DP Table Lab:* watch the table fill, with dependencies and the traceback highlighted.
   - *Recurrence Lab:* the Master theorem with recursion-tree reasoning, plus a numeric evaluator for checking a guessed bound.
-- **Cheat sheet:** every topic's cheat sheet on one page, ready to print.
+- **Cheat sheet:** every topic's cheat sheet on one page, ready to print. It opens with a **symbol guide** that explains each piece of notation, including symbols whose meaning changes between topics (such as δ). Each topic's cheat sheet tab also has a "What do the symbols mean?" box. The guide lives in `js/core/notation.js`.
 - **Progress:** mastery per topic. You can export or import your progress.
 
 Progress is saved in your browser's local storage. Use **Progress → Export** to move it to another browser or computer.

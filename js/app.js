@@ -197,7 +197,13 @@
     if (tab === 'quiz') return quizView(t, head);
     if (tab === 'cards') return cardsView(t, head);
     if (tab === 'practice') return practiceView(t, head);
-    if (tab === 'sheet') { setMain(`${head}<article class="prose sheet">${md(t.cheatsheet || '*No cheat sheet yet.*')}</article>`); return; }
+    if (tab === 'sheet') {
+      const groups = (window.NOTATION || []).filter((g) => g.topics.includes(t.id));
+      setMain(`${head}<article class="prose sheet">${md(t.cheatsheet || '*No cheat sheet yet.*')}</article>
+        ${groups.length ? `<details class="card prose sheet notation"><summary><b>What do the symbols mean?</b> <span class="muted small">The notation used on this sheet. <a href="#/cheatsheet" data-jump="symbols">Full symbol guide</a></span></summary>${groups.map(notationHTML).join('')}</details>` : ''}`);
+      $$('[data-jump]').forEach((a) => { a.onclick = () => { pendingJump = a.dataset.jump; }; });
+      return;
+    }
     return notFound();
   }
 
@@ -958,11 +964,19 @@ A missing transition rejects. Tape is two-way infinite; input starts under the h
   }
 
   /* --------------------------------------------------------- cheat sheet */
+  function notationHTML(g) { return `<h3>${esc(g.title)}</h3>${md(g.md)}`; }
   function pageCheatsheet(params) {
     const mt2 = params && params.get('set') === 'mt2';
     const list = mt2 ? MT2_TOPICS.map((id) => TOPIC.get(id)) : TOPICS;
+    const ids = new Set(list.map((t) => t.id));
+    // On the Midterm 2 sheet, skip groups only needed for topics outside the exam (e.g. P and NP).
+    const groups = (window.NOTATION || []).filter((g) => g.topics.some((id) => ids.has(id) && (!mt2 || id !== 'np')));
     setMain(`<header class="page-head"><div class="head-row"><h1>${mt2 ? 'Midterm 2 cheat sheet' : 'Cheat sheet'}</h1><button class="btn sm" onclick="window.print()">🖨 Print</button></div><p class="muted">${mt2 ? 'Key facts for topics 10–18 in one place. <a href="#/cheatsheet">Show all topics</a>' : 'Every topic\'s key facts in one place. <a href="#/cheatsheet?set=mt2">Midterm 2 topics only</a>'}</p></header>
+      ${groups.length ? `<section id="symbols" class="symbols"><h2>Symbol guide</h2><p class="muted">What each piece of notation on these sheets means. A few symbols change meaning between topics. For example, δ is the transition function in automata, but a distance in graphs and in closest pair. Each group below lists the meaning for its topics.</p>
+        <div class="sheet-all">${groups.map((g) => `<section class="card prose sheet notation"><h2>${esc(g.title)}</h2>${md(g.md)}</section>`).join('')}</div></section>
+      <h2 class="sec">Key facts by topic</h2>` : ''}
       <div class="sheet-all">${list.map((t) => `<section class="card prose sheet"><h2><a href="#/topic/${t.id}">${t.order}. ${esc(t.title)}</a></h2>${md(t.cheatsheet || '*—*', { shiftHeadings: 1 })}</section>`).join('')}</div>`);
+    $$('[data-jump]').forEach((a) => { a.onclick = () => { pendingJump = a.dataset.jump; }; });
   }
 
   /* ------------------------------------------------------------ progress */
