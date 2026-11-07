@@ -1969,5 +1969,159 @@ The $9^L = n^2$ leaves add only $\Theta(n^2)$. So $T(n) = \Theta(n^2\log^2 n)$ (
 - *Best case:* $T(n) = T(n/2) + \Theta(n) = \Theta(n)$, for an increasing array.
 Worst-case analysis must take the more expensive branch, and you should check that some input really forces it at every level. It does here, because B is a prefix of A.`,
     },
+    {
+      id: 'recursion-p1-short', type: 'written', title: 'Practice Midterm 1 · Problem 1: Short answers', difficulty: 2,
+      tags: ['mt2-practice-1', 'recurrences', 'memoization'],
+      prompt: String.raw`**(a)** Solve the following recurrences.
+
+- $A(n) = A(5n/11) + O(\sqrt n)$
+- $B(n) = 8B(n/2) + O(n^2)$
+- $C(n) = C(n/2) + C(n/3) + C(n/6) + O(n)$
+
+**(b)** Describe an appropriate memoization structure and evaluation order for the following (meaningless) recurrences, and state the running time of the resulting iterative algorithm to compute the requested function value.
+
+- Compute $Foo(1, n)$ where
+$$Foo(i,k) = \begin{cases} 0 & \text{if } i \ge k-1 \\ \max\limits_{i<j<k} \big\{ Foo(i,j) + Foo(j,k) \big\} + \sum\limits_{j=i}^{k} A[j] & \text{otherwise} \end{cases}$$
+
+- Compute $Bar(n, 1)$ where
+$$Bar(i,s) = \begin{cases} \infty & \text{if } i < 0 \text{ or } s > n \\ 0 & \text{if } i = 0 \\ \min \big\{ Bar(i, 2s),\; X[i]\cdot s + Bar(i-s, s) \big\} & \text{otherwise} \end{cases}$$
+
+*From the official Fall 2026 Midterm 2 Practice 1.*`,
+      rubric: [
+        '(1 pt each) Correct bound for A(n), B(n) and C(n)',
+        '(1 pt) Foo: memoization structure (what is stored, and its size)',
+        '(1 pt) Foo: an evaluation order that respects every dependency',
+        '(1 pt) Foo: running time, including the cost of the sum',
+        '(1 pt) Bar: memoization structure, noticing which values of s actually occur',
+        '(1 pt) Bar: an evaluation order that respects every dependency',
+        '(1 pt) Bar: running time',
+        '(1 pt) Brief justification for each answer',
+      ],
+      hints: [
+        String.raw`For (a), compare the work at the root with the work at the leaves, or check how the level sums change from one level of the recursion tree to the next.`,
+        String.raw`For $Bar$, start from $s = 1$ and follow the recursive calls. Which values can $s$ take?`,
+      ],
+      checks: [
+        { type: 'mc', q: String.raw`$A(n) = A(5n/11) + O(\sqrt n)$ solves to`, choices: [String.raw`$O(\sqrt n)$`, String.raw`$O(\sqrt n \log n)$`, String.raw`$O(\log n)$`, String.raw`$O(n)$`], answer: 0,
+          explain: String.raw`One subproblem, so the level sums are $\sqrt n, \sqrt{5n/11}, \sqrt{(5/11)^2 n}, \dots$: a **decreasing** geometric series with ratio $\sqrt{5/11} < 1$. The root dominates: $O(\sqrt n)$.` },
+        { type: 'mc', q: String.raw`$B(n) = 8B(n/2) + O(n^2)$ solves to`, choices: [String.raw`$O(n^2)$`, String.raw`$O(n^2 \log n)$`, String.raw`$O(n^3)$`, String.raw`$O(n^8)$`], answer: 2,
+          explain: String.raw`Level $i$ costs $8^i (n/2^i)^2 = 2^i n^2$: an **increasing** series, so the leaves dominate. There are $8^{\lg n} = n^3$ leaves, giving $O(n^3)$.` },
+        { type: 'mc', q: String.raw`$C(n) = C(n/2) + C(n/3) + C(n/6) + O(n)$ solves to`, choices: [String.raw`$O(n)$`, String.raw`$O(n \log n)$`, String.raw`$O(n^{1.5})$`, String.raw`$O(n^2)$`], answer: 1,
+          explain: String.raw`The fractions add up to exactly $1/2 + 1/3 + 1/6 = 1$, so every full level of the recursion tree costs $n$. The depth is $\Theta(\log n)$, so the total is $O(n \log n)$. If the fractions added up to less than 1, the answer would be $O(n)$.` },
+        { type: 'mc', q: String.raw`Which evaluation order works for $Foo$?`, choices: [String.raw`$i$ from 1 up to $n$ (outer), $k$ from 1 up to $n$ (inner)`, String.raw`$i$ from $n$ down to 1 (outer), $k$ from 1 up to $n$ (inner)`, String.raw`$k$ from $n$ down to 1 (outer), $i$ from 1 up to $n$ (inner)`, String.raw`Any order works, because the recurrence is a max`], answer: 1,
+          explain: String.raw`$Foo(i,k)$ needs $Foo(i,j)$ with $j < k$ (same row, **smaller** $k$) and $Foo(j,k)$ with $j > i$ (a **larger** $i$). So $i$ must decrease in the outer loop and $k$ must increase in the inner loop. Filling by increasing interval length $k - i$ also works.` },
+        { type: 'mc', q: String.raw`The iterative algorithm for $Foo(1, n)$ runs in`, choices: [String.raw`$O(n^2)$`, String.raw`$O(n^3)$`, String.raw`$O(n^4)$`, String.raw`$O(n^2 \log n)$`], answer: 1,
+          explain: String.raw`There are $O(n^2)$ entries. Each takes a max over $O(n)$ values of $j$ plus a sum of $O(n)$ terms, so $O(n)$ per entry and $O(n^3)$ in total. Precomputing prefix sums makes the sum $O(1)$, but the max still costs $O(n)$.` },
+        { type: 'mc', q: String.raw`Which table should store $Bar$?`, choices: [String.raw`An $(n+1) \times (n+1)$ array indexed by $i$ and $s$`, String.raw`An array $Bar[0..n][0..\lfloor \lg n \rfloor]$ indexed by $i$ and $\log_2 s$`, String.raw`A one-dimensional array indexed by $i$`, String.raw`A hash table, since the recursion never repeats a call`], answer: 1,
+          explain: String.raw`Starting from $s = 1$, the recursion only ever doubles $s$ or keeps it, so $s$ is always a power of 2 up to $n$ (larger $s$ returns $\infty$). Indexing by $\log_2 s$ gives an $(n+1) \times (\lfloor \lg n \rfloor + 1)$ table. A full $(n+1) \times (n+1)$ array also gives correct answers, but it wastes space and, if every entry is filled, time.` },
+        { type: 'mc', q: String.raw`The iterative algorithm for $Bar(n, 1)$ runs in`, choices: [String.raw`$O(n)$`, String.raw`$O(n \log n)$`, String.raw`$O(n^2)$`, String.raw`$O(n^2 \log n)$`], answer: 1,
+          explain: String.raw`$O(n \log n)$ entries, each computed in $O(1)$ time from two other entries. The evaluation order: $i$ increasing in the outer loop (because $Bar(i - s, s)$ has a smaller $i$), and $s$ decreasing in the inner loop (because $Bar(i, 2s)$ has a larger $s$).` },
+      ],
+      solution: String.raw`### (a)
+
+- $A(n) = O(\sqrt n)$. There is one subproblem, so the recursion tree is a path. The costs $\sqrt n, \sqrt{(5/11) n}, \dots$ form a decreasing geometric series with ratio $\sqrt{5/11} < 1$, so the root term dominates.
+- $B(n) = O(n^3)$. Level $i$ costs $8^i (n/2^i)^2 = 2^i n^2$. That increases geometrically, so the leaves dominate: $8^{\lg n} = n^{\lg 8} = n^3$. (Master theorem: $n^{\log_2 8} = n^3$ beats $n^2$.)
+- $C(n) = O(n \log n)$. The children's sizes add up to $n/2 + n/3 + n/6 = n$, so every level of the recursion tree costs $n$ until the shallowest branch ends. There are between $\log_6 n$ and $\log_2 n$ levels, so the total is $\Theta(n \log n)$.
+
+### (b) Foo
+
+- **Memoization.** A two-dimensional array $Foo[1..n, 1..n]$. Optionally also a prefix-sum array $S[0..n]$ with $S[k] = A[1] + \dots + A[k]$, so that $\sum_{j=i}^{k} A[j] = S[k] - S[i-1]$.
+- **Dependencies.** $Foo(i, k)$ reads $Foo(i, j)$ for $j < k$ and $Foo(j, k)$ for $j > i$.
+- **Evaluation order.** Outer loop: $i$ from $n$ **down** to 1. Inner loop: $k$ from 1 **up** to $n$. (Increasing $k - i$ also works.)
+- **Time.** $O(n^2)$ entries, $O(n)$ each for the max: **$O(n^3)$**.
+
+### (b) Bar
+
+- **Which subproblems occur?** The call $Bar(n, 1)$ only creates calls where $s$ is a power of 2. Any $s > n$ returns $\infty$ immediately, so $s \in \{1, 2, 4, \dots, 2^{\lfloor \lg n \rfloor}\}$, and $0 \le i \le n$.
+- **Memoization.** A two-dimensional array $Bar[0..n, 0..\lfloor \lg n \rfloor]$, where entry $[i, e]$ stores $Bar(i, 2^e)$. Out-of-range calls are base cases handled on the fly.
+- **Dependencies.** $Bar(i, s)$ reads $Bar(i, 2s)$ (same $i$, larger $s$) and $Bar(i - s, s)$ (smaller $i$, same $s$).
+- **Evaluation order.** Outer loop: $i$ from 0 **up** to $n$. Inner loop: $e$ from $\lfloor \lg n \rfloor$ **down** to 0.
+- **Time.** $O(n \log n)$ entries at $O(1)$ each: **$O(n \log n)$**.
+
+> **Exam tip.** For "meaningless recurrence" questions, the graders want exactly four things: the table (with its index ranges), the order of the loops and the direction of each, the time, and that the order really respects every dependency. Write the dependencies down first, then choose the loop directions to match.`,
+    },
+    {
+      id: 'recursion-p3-short', type: 'written', title: 'Practice Midterm 3 · Problem 1: Short answers', difficulty: 2,
+      tags: ['mt2-practice-3', 'recurrences', 'topological sort', 'shortest paths', 'memoization'],
+      prompt: String.raw`**(a)** Solve the following recurrences.
+
+- $A(n) = 3A(n/2) + O(n^2)$
+- $B(n) = 7B(n/2) + O(n^2)$
+- $C(n) = 4C(n/2) + O(n^2)$
+
+**(b)** Draw a directed acyclic graph with at most ten vertices, exactly one source, exactly one sink, and more than one topological order.
+
+**(c)** Draw a directed graph with at most ten vertices, with **distinct** positive edge weights, that has more than one shortest path from some vertex $s$ to some other vertex $t$.
+
+**(d)** Describe an appropriate memoization structure and evaluation order for the following (meaningless) recurrence, and give the running time of the resulting iterative algorithm to compute $Huh(1, n)$.
+$$Huh(i,k) = \begin{cases} 0 & \text{if } i > n \text{ or } k < 0 \\ \min\big\{ Huh(i+1, k-2),\ Huh(i+2, k-1) \big\} + A[i,k] & \text{if } A[i,k] \text{ is even} \\ \max\big\{ Huh(i+1, k-2),\ Huh(i+2, k-1) \big\} - A[i,k] & \text{if } A[i,k] \text{ is odd} \end{cases}$$
+
+*From the official Fall 2026 Midterm 2 Practice 3.*`,
+      rubric: [
+        '(1 pt each) Correct bound for A(n), B(n) and C(n)',
+        '(2 pts) (b) A valid DAG: one source, one sink, at least two topological orders (and say which two)',
+        '(2 pts) (c) A valid graph: distinct positive weights, two different shortest s–t paths (show both lengths)',
+        '(1 pt) (d) Memoization structure with index ranges',
+        '(1 pt) (d) Evaluation order that respects both dependencies',
+        '(1 pt) (d) Running time',
+      ],
+      hints: [
+        String.raw`For (a), compare $n^{\log_2 a}$ with $n^2$ in each case.`,
+        String.raw`For (b), a diamond shape works. For (c), two different two-edge paths can have the same total length even though all four weights differ.`,
+        String.raw`For (d), both recursive calls increase $i$.`,
+      ],
+      checks: [
+        { type: 'mc', q: String.raw`$A(n) = 3A(n/2) + O(n^2)$ solves to`, choices: [String.raw`$O(n^2)$`, String.raw`$O(n^{\lg 3})$`, String.raw`$O(n^2 \log n)$`, String.raw`$O(n^3)$`], answer: 0,
+          explain: String.raw`Level $i$ costs $3^i (n/2^i)^2 = (3/4)^i n^2$, a decreasing series, so the root dominates: $O(n^2)$. Equivalently, $n^{\lg 3} \approx n^{1.58}$ is smaller than $n^2$.` },
+        { type: 'mc', q: String.raw`$B(n) = 7B(n/2) + O(n^2)$ solves to`, choices: [String.raw`$O(n^2)$`, String.raw`$O(n^2 \log n)$`, String.raw`$O(n^{\lg 7})$`, String.raw`$O(n^3)$`], answer: 2,
+          explain: String.raw`Level $i$ costs $(7/4)^i n^2$, an increasing series, so the leaves dominate: $n^{\lg 7} \approx n^{2.81}$. This is Strassen's recurrence.` },
+        { type: 'mc', q: String.raw`$C(n) = 4C(n/2) + O(n^2)$ solves to`, choices: [String.raw`$O(n^2)$`, String.raw`$O(n^2 \log n)$`, String.raw`$O(n^{\lg 4} \log^2 n)$`, String.raw`$O(n^4)$`], answer: 1,
+          explain: String.raw`Every level costs exactly $4^i (n/2^i)^2 = n^2$, and there are $\lg n$ levels: $O(n^2 \log n)$.` },
+        { type: 'tf', q: String.raw`A DAG with exactly one source and exactly one sink always has a unique topological order.`, answer: false,
+          explain: String.raw`The diamond $s \to a$, $s \to b$, $a \to t$, $b \to t$ has one source ($s$) and one sink ($t$), but both $s, a, b, t$ and $s, b, a, t$ are topological orders. The order is unique exactly when the graph has a path through **every** vertex (a Hamiltonian path).` },
+        { type: 'tf', q: String.raw`If all edge weights are distinct, the shortest path between two vertices is unique.`, answer: false,
+          explain: String.raw`Distinct **edge** weights do not make **path** lengths distinct. Take $s \to a$ of weight 1, $a \to t$ of weight 4, $s \to b$ of weight 2, $b \to t$ of weight 3: both paths have length 5. (Distinct weights do make the **minimum spanning tree** unique; that fact is about MSTs, not shortest paths.)` },
+        { type: 'mc', q: String.raw`Which evaluation order works for $Huh$?`, choices: [String.raw`$i$ from 1 up to $n$ (outer); any order for $k$`, String.raw`$i$ from $n$ down to 1 (outer); any order for $k$`, String.raw`$k$ from $n$ down to 0 (outer); any order for $i$`, String.raw`$i$ and $k$ must both increase`], answer: 1,
+          explain: String.raw`Both calls have a **larger** $i$ ($i+1$ or $i+2$), so filling rows in decreasing $i$ order is enough, with the inner loop over $k$ in either direction. (Increasing $k$ as the outer loop would also work, since both calls also have a smaller $k$.)` },
+        { type: 'mc', q: String.raw`The iterative algorithm for $Huh(1, n)$ runs in`, choices: [String.raw`$O(n)$`, String.raw`$O(n \log n)$`, String.raw`$O(n^2)$`, String.raw`$O(n^3)$`], answer: 2,
+          explain: String.raw`The table is $Huh[1..n+2, -2..n]$, with out-of-range entries equal to 0: $O(n^2)$ entries at $O(1)$ each.` },
+      ],
+      solution: String.raw`### (a)
+
+- $A(n) = O(n^2)$: level sums $(3/4)^i n^2$ decrease, so the root dominates.
+- $B(n) = O(n^{\lg 7})$: level sums $(7/4)^i n^2$ increase, so the $7^{\lg n} = n^{\lg 7} \approx n^{2.81}$ leaves dominate.
+- $C(n) = O(n^2 \log n)$: every one of the $\lg n$ levels costs $n^2$.
+
+### (b)
+
+~~~graph
+directed
+s a
+s b
+a t
+b t
+~~~
+
+The source is $s$ and the sink is $t$. Both $s, a, b, t$ and $s, b, a, t$ are topological orders, because nothing forces $a$ before $b$ or the reverse.
+
+### (c)
+
+~~~graph
+directed
+s a 1
+a t 4
+s b 2
+b t 3
+~~~
+
+The weights 1, 2, 3, 4 are distinct and positive, and both $s \to a \to t$ and $s \to b \to t$ have length 5. No other $s$–$t$ path exists, so both are shortest paths.
+
+### (d)
+
+- **Memoization.** A two-dimensional array $Huh[1..n+2,\ -2..n]$. Entries with $i > n$ or $k < 0$ are the base case 0, so they can be filled first or handled with an if-statement.
+- **Dependencies.** $Huh(i, k)$ reads $Huh(i+1, k-2)$ and $Huh(i+2, k-1)$: both have a larger $i$ and a smaller $k$.
+- **Evaluation order.** Outer loop: $i$ from $n$ **down** to 1. Inner loop: $k$ from 0 to $n$, in either direction.
+- **Time.** $O(n^2)$ entries at $O(1)$ each: **$O(n^2)$**.`,
+    },
   ],
 });

@@ -2039,5 +2039,203 @@ a decreasing geometric series dominated by its first term (about $2cn$). The bou
 
 *Application (for fun):* placing a post office at position p to minimize $\sum_i w_i|p - x_i|$ is solved by p = the weighted median. Moving p past a point changes the cost at rate (weight on one side) − (weight on the other), and that rate changes sign exactly at the weighted median.`,
     },
+    {
+      id: 'divide-p1-closest', type: 'written', title: 'Practice Midterm 1 · Problem 5: Closest pair with black boxes', difficulty: 2,
+      tags: ['mt2-practice-1', 'divide and conquer', 'closest pair'],
+      prompt: String.raw`This problem asks you to design an algorithm to find the closest pair of points in a given set $P$ of $n$ points in the plane. Points in $P$ are represented by an array $P[1..n]$ of coordinate pairs; the coordinates of the $i$th point are $(P[i].x, P[i].y)$. The points are sorted by their $x$-coordinates, and all $x$- and $y$-coordinates are distinct. In particular, $P[i].x < P[i+1].x$ for every index $i$. Timothy has helpfully implemented a pair of subroutines for you.
+
+- **IWalkTheLine$(P, a)$** computes the closest pair of points in a given $n$-point set $P$ that **cross** the vertical line $x = a$, in $O(n)$ time. Specifically, it returns the indices $i$ and $j$ of the closest pair of points such that $P[i].x \le a < P[j].x$.
+- **Distance$(p, q)$** returns the Euclidean distance between two points $p$ and $q$, in $O(1)$ time.
+
+Describe and analyze an algorithm to compute the Euclidean distance between the closest pair of points in $P$, using Timothy's subroutines as black boxes. (Do *not* try to implement Timothy's subroutines yourself!)
+
+*From the official Fall 2026 Midterm 2 Practice 1.*`,
+      rubric: [
+        '(2 pts) Base case(s) for tiny inputs',
+        '(3 pts) Split at the median x-coordinate and recurse on both halves',
+        '(2 pts) Use IWalkTheLine on the current subarray to handle crossing pairs; return the minimum of the three',
+        '(1 pt) Brief argument that every pair is counted in exactly one of the three cases',
+        '(2 pts) Recurrence T(n) = 2T(n/2) + O(n) and its solution O(n log n)',
+      ],
+      hints: [
+        String.raw`Every pair of points is either entirely left of a vertical line, entirely right of it, or crosses it.`,
+        String.raw`Choose the line so that the two sides have equal size; the input is already sorted by $x$.`,
+      ],
+      checks: [
+        { type: 'mc', q: String.raw`To split $P[lo..hi]$ with $m = \lfloor (lo + hi)/2 \rfloor$, which value of $a$ should you pass to IWalkTheLine?`, choices: [String.raw`$a = P[m].x$`, String.raw`$a = (P[lo].x + P[hi].x)/2$`, String.raw`$a = P[m].y$`, String.raw`$a = m$`], answer: 0,
+          explain: String.raw`With $a = P[m].x$, the points with $x \le a$ are exactly $P[lo..m]$ and those with $x > a$ are exactly $P[m+1..hi]$, because the $x$-coordinates are sorted and distinct. So the crossing pairs are exactly the pairs with one point in each half. The midpoint of the $x$-range (option B) could put almost every point on one side, and then the recursion is no longer balanced.` },
+        { type: 'mc', q: String.raw`What is the recurrence for the running time?`, choices: [String.raw`$T(n) = 2T(n/2) + O(n)$, so $O(n \log n)$`, String.raw`$T(n) = T(n/2) + O(n)$, so $O(n)$`, String.raw`$T(n) = 2T(n/2) + O(1)$, so $O(n)$`, String.raw`$T(n) = 2T(n/2) + O(n \log n)$, so $O(n \log^2 n)$`], answer: 0,
+          explain: String.raw`Two recursive calls on halves, plus one $O(n)$ call to IWalkTheLine on the current subarray and $O(1)$ for Distance and the min. The points are already sorted, so there is no sorting cost inside the recursion.` },
+        { type: 'tf', q: String.raw`It is fine to call IWalkTheLine on the whole original array $P[1..n]$ at every level of the recursion.`, answer: false,
+          explain: String.raw`The answer would still be correct, but each call would cost $O(n)$ for the **whole** array. With $\Theta(n)$ recursive calls in total, that is $\Theta(n^2)$ time. Call it on the current subarray $P[lo..hi]$ so that the call costs $O(hi - lo + 1)$.` },
+      ],
+      solution: String.raw`**Algorithm.** Call $CP(1, n)$, where $CP(lo, hi)$ returns the smallest distance between two points of $P[lo..hi]$ ($\infty$ if there are fewer than two points):
+
+~~~pseudo
+CP(lo, hi):
+    if hi - lo + 1 <= 3:
+        return the minimum Distance over all pairs in P[lo..hi]    // infinity if fewer than 2 points
+    m <- floor((lo + hi) / 2)
+    dL <- CP(lo, m)
+    dR <- CP(m + 1, hi)
+    (i, j) <- IWalkTheLine(P[lo..hi], P[m].x)
+    dX <- Distance(P[i], P[j])
+    return min(dL, dR, dX)
+~~~
+
+**Correctness.** Let $a = P[m].x$. Because the $x$-coordinates are sorted and distinct, the points of $P[lo..hi]$ with $x \le a$ are exactly $P[lo..m]$, and those with $x > a$ are exactly $P[m+1..hi]$. So every pair of points in $P[lo..hi]$ falls into exactly one of three cases: both in the left half (found by $CP(lo, m)$, by induction), both in the right half (found by $CP(m+1, hi)$), or one on each side, which is exactly a pair crossing the line $x = a$ (found by IWalkTheLine). The minimum of the three is the closest pair overall. The base cases are checked directly.
+
+**Time.** IWalkTheLine on $hi - lo + 1$ points costs $O(hi - lo + 1)$, and everything else outside the recursion costs $O(1)$:
+$$T(n) = 2\,T(n/2) + O(n) \quad\Longrightarrow\quad T(n) = O(n \log n).$$
+
+> **Exam tip.** The black box does the hard part (the strip argument). What you need to get right is that the line splits the current subarray exactly at index $m$, and that the black box runs on the subarray, not on all of $P$.`,
+    },
+    {
+      id: 'divide-p2-mergek', type: 'written', title: 'Practice Midterm 2 · Problem 4: Merging k sorted arrays', difficulty: 2,
+      tags: ['mt2-practice-2', 'divide and conquer', 'merging'],
+      prompt: String.raw`Suppose you are given $k$ arrays $A_1[1..n], A_2[1..n], \dots, A_k[1..n]$, each with the same length $n$, and each sorted in increasing order. Describe an algorithm to merge the given arrays into a single sorted array. Analyze the running time of your algorithm as a function of $n$ and $k$.
+
+*From the official Fall 2026 Midterm 2 Practice 2.*`,
+      rubric: [
+        '(4 pts) A correct algorithm that is faster than merging the arrays one at a time (e.g. pairwise divide and conquer, or a heap of the k fronts)',
+        '(2 pts) Brief justification of correctness',
+        '(2 pts) Recurrence or counting argument for the running time',
+        '(2 pts) Correct bound O(nk log k)',
+      ],
+      hints: [
+        String.raw`Merging two sorted arrays of total length $m$ takes $O(m)$ time. What does merging one array at a time cost?`,
+        String.raw`Merge the first $k/2$ arrays recursively, merge the last $k/2$ recursively, then merge the two results.`,
+      ],
+      checks: [
+        { type: 'mc', q: String.raw`Merging the arrays one at a time ($A_1$ with $A_2$, then the result with $A_3$, and so on) takes`, choices: [String.raw`$O(nk)$`, String.raw`$O(nk \log k)$`, String.raw`$O(nk^2)$`, String.raw`$O(n^2 k)$`], answer: 2,
+          explain: String.raw`The $i$-th merge combines an array of length $(i-1)n$ with one of length $n$, costing $O(in)$. Summing over $i = 2..k$ gives $O(n k^2)$.` },
+        { type: 'mc', q: String.raw`Divide and conquer: merge the first half of the arrays recursively, merge the second half recursively, then merge the two results. With $T(k)$ = the time for $k$ arrays of length $n$:`, choices: [String.raw`$T(k) = 2T(k/2) + O(nk)$, so $O(nk \log k)$`, String.raw`$T(k) = 2T(k/2) + O(n)$, so $O(nk)$`, String.raw`$T(k) = T(k/2) + O(nk)$, so $O(nk)$`, String.raw`$T(k) = 2T(k/2) + O(nk)$, so $O(nk^2)$`], answer: 0,
+          explain: String.raw`The final merge combines two arrays of total length $nk$, which costs $O(nk)$. Each level of the recursion tree does $O(nk)$ work in total, and there are $\lg k$ levels.` },
+        { type: 'tf', q: String.raw`Keeping the current front element of each array in a binary min-heap also merges in $O(nk \log k)$ time.`, answer: true,
+          explain: String.raw`There are $nk$ output steps. Each one is an extract-min plus an insert of the next element from the same array, on a heap that never holds more than $k$ items: $O(\log k)$ per step.` },
+      ],
+      solution: String.raw`**Algorithm (divide and conquer).**
+
+~~~pseudo
+MergeAll(A_1, ..., A_k):
+    if k = 1: return A_1
+    L <- MergeAll(A_1, ..., A_{floor(k/2)})
+    R <- MergeAll(A_{floor(k/2)+1}, ..., A_k)
+    return Merge(L, R)            // the standard linear-time merge from mergesort
+~~~
+
+**Correctness.** By induction on $k$: the two recursive calls return sorted arrays containing exactly the elements of their halves, and Merge combines two sorted arrays into one sorted array containing all the elements of both.
+
+**Time.** Let $T(k)$ be the time for $k$ arrays of length $n$. The final Merge handles $nk$ elements:
+$$T(k) = 2\,T(k/2) + O(nk), \qquad T(1) = O(1).$$
+Every level of the recursion tree merges all $nk$ elements once, so it costs $O(nk)$, and there are $\lceil \lg k \rceil$ levels. Total: **$O(nk \log k)$**.
+
+**Alternative.** Keep a min-heap holding the current front element of each array. Repeatedly extract the minimum, append it to the output, and insert the next element from the same array. That is $nk$ steps at $O(\log k)$ each, for the same $O(nk \log k)$.
+
+> **Warning.** Merging the arrays one at a time costs $\sum_{i=2}^{k} O(in) = O(nk^2)$. That is correct but slower, and on an exam it would get partial credit at best.`,
+    },
+    {
+      id: 'divide-p3-parity', type: 'written', title: 'Practice Midterm 3 · Problem 4: The one even pair', difficulty: 2,
+      tags: ['mt2-practice-3', 'binary search', 'divide and conquer'], code: 'divide-p3-parity-code',
+      prompt: String.raw`Suppose you are given an array $A[1..n]$ of integers such that $A[i] + A[i+1]$ is even for *exactly one* index $i$. In other words, the elements of $A$ alternate between even and odd, except for exactly one adjacent pair that are either both even or both odd.
+
+Describe and analyze an efficient algorithm to find the unique index $i$ such that $A[i] + A[i+1]$ is even. For example, given the following array as input, your algorithm should return the integer 6, because $A[6] + A[7] = 88 + 62$ is even.
+
+| $i$ | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| $A[i]$ | 17 | **40** | 23 | **72** | 39 | **88** | **62** | 13 | **40** | 53 | **92** | 21 | **10** | 73 | **68** |
+
+(Even entries are in bold.)
+
+*From the official Fall 2026 Midterm 2 Practice 3.*`,
+      rubric: [
+        '(3 pts) Identify a property of each index that can be tested in O(1) and that changes exactly once, at the answer',
+        '(3 pts) A correct binary search on that property (correct boundary handling)',
+        '(2 pts) Correctness argument (the invariant)',
+        '(2 pts) O(log n) running time with justification',
+      ],
+      hints: [
+        String.raw`Before the bad pair, the parity of $A[j]$ is determined by the parity of $A[1]$ and of $j$. What happens after the bad pair?`,
+        String.raw`Call index $j$ *on schedule* if $A[j] \equiv A[1] + (j - 1) \pmod 2$. Which indices are on schedule?`,
+      ],
+      checks: [
+        { type: 'mc', q: String.raw`Call $j$ *on schedule* if $A[j] \equiv A[1] + (j-1) \pmod 2$. If the unique even pair is at index $i$, which indices are on schedule?`, choices: [String.raw`Exactly the indices $j \le i$`, String.raw`Exactly the indices $j \ge i$`, String.raw`Exactly the odd indices`, String.raw`All indices except $i$ and $i+1$`], answer: 0,
+          explain: String.raw`Up to index $i$ the parities alternate, so $A[j]$ follows the schedule set by $A[1]$. At the pair $(i, i+1)$ the parity repeats instead of flipping, so from $i+1$ onward every element is exactly one step off schedule. The property is true, ..., true, false, ..., false, so it can be binary searched.` },
+        { type: 'short', q: String.raw`For the 15-element example, which index does the algorithm return?`, answer: ['6'],
+          explain: String.raw`$A[1] = 17$ is odd, so on schedule means odd at odd positions and even at even positions. $A[6] = 88$ is even at an even position (on schedule), but $A[7] = 62$ is even at an odd position (off schedule). The last on-schedule index is **6**.` },
+        { type: 'mc', q: String.raw`The binary search runs in`, choices: [String.raw`$O(1)$`, String.raw`$O(\log n)$`, String.raw`$O(\sqrt n)$`, String.raw`$O(n)$`], answer: 1,
+          explain: String.raw`Each step tests one index in $O(1)$ and halves the range: $T(n) = T(n/2) + O(1) = O(\log n)$. A linear scan would be $O(n)$, which works but misses the point of the question.` },
+      ],
+      solution: String.raw`**Key property.** Say index $j$ is *on schedule* if
+$$A[j] \equiv A[1] + (j - 1) \pmod 2,$$
+that is, $A[j]$ has the parity it would have if the whole array alternated perfectly starting from $A[1]$. Let $i$ be the answer. Then:
+
+- for $j \le i$: the parities alternate from 1 up to $i$, so $j$ is on schedule;
+- for $j \ge i + 1$: $A[i+1]$ has the **same** parity as $A[i]$ instead of the opposite one, and the parities alternate again after that, so every such $j$ is exactly one step off schedule.
+
+So the on-schedule test reads true, ..., true, false, ..., false, and the answer $i$ is the **last** on-schedule index. (Index 1 is always on schedule, and index $n$ never is, because $i \le n - 1$.)
+
+**Algorithm.** Binary search for the boundary.
+
+~~~pseudo
+FindEvenPair(A[1..n]):
+    lo <- 1; hi <- n            // invariant: lo is on schedule, hi is not
+    while hi - lo > 1:
+        mid <- floor((lo + hi) / 2)
+        if (A[mid] - A[1] - (mid - 1)) is even: lo <- mid
+        else: hi <- mid
+    return lo
+~~~
+
+**Correctness.** The invariant holds initially and is preserved by each step. When the loop ends, $hi = lo + 1$, with $lo$ on schedule and $lo + 1$ not, so $lo$ is the last on-schedule index, which is $i$.
+
+**Time.** Each iteration halves $hi - lo$ and takes $O(1)$ time: **$O(\log n)$**.
+
+**Example.** $A[1] = 17$ is odd, so position $j$ is on schedule when $A[j]$ is odd for odd $j$ and even for even $j$. Positions 1–6 are on schedule ($88$ is even at position 6); position 7 is not ($62$ is even at an odd position). The algorithm returns 6.`,
+    },
+    {
+      id: 'divide-p3-parity-code', type: 'code', title: 'Practice 3 · The one even pair (code)', difficulty: 2,
+      tags: ['mt2-practice-3', 'binary search'],
+      prompt: String.raw`Implement the algorithm from [The one even pair](#/problem/divide-p3-parity).
+
+<code>evenPair(A)</code> receives an array (0-indexed here) in which <code>A[i] + A[i+1]</code> is even for exactly one index. Return that index **using 1-based numbering**, as in the problem (so the handout example returns 6). Elements may be negative.
+
+Use binary search: the grader can't measure your running time, so it is up to you to keep it $O(\log n)$. Note that in JavaScript, <code>-3 % 2</code> is <code>-1</code>.`,
+      fn: 'evenPair',
+      starter: 'function evenPair(A) {\n  // return the 1-based index i with A[i] + A[i+1] even\n}\n',
+      reference: function (A) {
+        const par = (x) => ((x % 2) + 2) % 2;
+        const on = (j) => par(A[j - 1] - A[0] - (j - 1)) === 0;
+        let lo = 1, hi = A.length;
+        while (hi - lo > 1) { const mid = (lo + hi) >> 1; if (on(mid)) lo = mid; else hi = mid; }
+        return lo;
+      },
+      tests: [
+        [[17, 40, 23, 72, 39, 88, 62, 13, 40, 53, 92, 21, 10, 73, 68]],
+        [[2, 4]],
+        [[1, 3, 4]],
+        [[-3, 2, -5, -7, 8]],
+        [[0, 1, 2, 3, 4, 5, 7, 8, 9]],
+      ],
+      gen: () => {
+        const n = 2 + Math.floor(Math.random() * 25), i = 1 + Math.floor(Math.random() * (n - 1));
+        const A = []; let p = Math.random() < 0.5 ? 0 : 1;
+        for (let j = 1; j <= n; j++) { A.push(2 * (Math.floor(Math.random() * 41) - 20) + p); if (j !== i) p ^= 1; }
+        return [A];
+      },
+      hints: [String.raw`Keep the invariant "lo is on schedule, hi is not", starting from lo = 1, hi = n (1-based).`],
+      solution: String.raw`~~~pseudo
+function evenPair(A) {
+  const par = (x) => ((x % 2) + 2) % 2;                      // parity that also works for negatives
+  const on = (j) => par(A[j - 1] - A[0] - (j - 1)) === 0;    // is 1-based index j on schedule?
+  let lo = 1, hi = A.length;                                  // lo on schedule, hi not
+  while (hi - lo > 1) {
+    const mid = (lo + hi) >> 1;
+    if (on(mid)) lo = mid; else hi = mid;
+  }
+  return lo;
+}
+~~~`,
+    },
   ],
 });

@@ -156,6 +156,11 @@ Arguments/outputs must be JSON-serializable (no Map/Set). `reference`, `gen`, `c
 ```
 Students self-grade against the rubric and the model solution (and can copy a "grade my answer" prompt to an AI tutor).
 
+### Optional fields on any problem
+* `checks: [ ...quiz questions... ]`: "quick checks" shown in their own card under the problem, using the same format as `quiz` entries (`mc`, `multi`, `tf`, `short`, each with `explain`). Students get instant feedback, and results are saved per problem. Use them to test the key decisions (the subproblem, the evaluation order, the running time, a small worked instance).
+* `code: 'other-problem-id'`: links a written problem to its auto-graded `code` version (a "Code version" button on the problem page and a "code" pill on the Midterm 2 page).
+* Tags `mt2-mock-1..3` put a problem in a mock midterm on the Midterm 2 page. The official practice exams are listed by id in `PRACTICE_EXAMS` in <code>js/app.js</code>.
+
 ## Style expectations (CS 374 at UIUC)
 
 * Match the conventions of the UIUC course (Erickson's *Algorithms* / *Models of Computation* notes): regex `+` for union, fooling-set proofs for non-regularity, product construction, Thompson & subset (incremental) constructions, DP solutions given as (1) English spec of the recursive function, (2) recurrence with base cases, (3) memoization data structure, (4) evaluation order, (5) time/space; graph problems solved by *modeling* (describe vertices/edges/weights, then call a standard algorithm, state running time in terms of the original input); NP-hardness by reducing FROM a known NP-hard problem TO the new problem with both directions of the proof; undecidability by reduction from the halting problem / Rice's theorem.

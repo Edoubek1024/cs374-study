@@ -2278,5 +2278,199 @@ $$L(i,j) = \max\Big\{\,L(i+1, j),\ \ \max_{\substack{i < k \le j\\ (s_i, s_k) \t
 **(c)** s = ( ( ) ] ( [ ) ] ) at positions 1..9. Some entries: L(2, 3) = 2 ("()"); L(6, 8) = 2 ("[]" from positions 6, 8); L(5, 9) = 4 ("([])" from positions 5, 6, 8, 9); L(2, 6) = 2; L(2, 8) = 4 ("()" and "[]").
 At the top: skipping $s_1$ gives L(2, 9) = 6; matching $s_1$ with $s_7$ gives 2 + L(2, 6) + L(8, 9) = 2 + 2 + 0 = 4; matching $s_1$ with $s_9$ gives 2 + L(2, 8) = 2 + 4 = 6. So L(1, 9) = **6**. A longest well-formed subsequence is ( ( ) [ ] ) from positions 1, 2, 3, 6, 8, 9; the fewest deletions is 9 − 6 = **3**. (Well-formed logs have even length, so the only possible improvement would be 8, i.e. a single deletion; the DP certifies that no single deletion works.)`,
     },
+    {
+      id: 'dp2-p2-squaredepth', type: 'written', title: 'Practice Midterm 2 · Problem 3: Square-depth', difficulty: 2,
+      tags: ['mt2-practice-2', 'interval dp'], code: 'dp2-p2-squaredepth-code',
+      prompt: String.raw`Suppose we are given an $n$-digit integer $X$. Repeatedly delete one digit from either end of $X$ (your choice) until no digits are left. The *square-depth* of $X$ is the maximum number of perfect squares that you can see during this process.
+
+For example, the integer 32492 has square-depth 3, by the following sequence of digit deletions:
+$$32492 \to \underbrace{3249}_{57^2} \to \underbrace{324}_{18^2} \to 24 \to \underbrace{4}_{2^2} \to \varepsilon.$$
+
+Describe and analyze an algorithm to compute the square-depth of a given integer $X$, represented as an array $X[1..n]$ of $n$ decimal digits. Assume you have access to a subroutine IsSquare that determines whether a given $k$-digit number (represented by an array of digits) is a perfect square ***in $O(k^2)$ time***.
+
+*From the official Fall 2026 Midterm 2 Practice 2.*`,
+      rubric: [
+        '(3 pts) Clear English description of the recursive function in terms of a substring X[i..j], and how to call it',
+        '(3 pts) Correct recurrence with base case: count the current number once, then the better of the two deletions',
+        '(2 pts) Memoization structure and an evaluation order by increasing length (or i down, j up)',
+        '(2 pts) Running time that accounts for the O(k^2) IsSquare calls',
+      ],
+      hints: [
+        String.raw`After any sequence of deletions, what is left is a contiguous block $X[i..j]$.`,
+        String.raw`Count the number you are looking at now (if it is a square), then choose the better of deleting the left or the right digit.`,
+      ],
+      checks: [
+        { type: 'mc', q: String.raw`Let $SD(i, j)$ be the square-depth of the number with digits $X[i..j]$. For $i \le j$, $SD(i, j) =$`, choices: [
+          String.raw`$[IsSquare(X[i..j])] + \max\{ SD(i+1, j),\ SD(i, j-1) \}$`,
+          String.raw`$\max\{ SD(i+1, j),\ SD(i, j-1) \}$`,
+          String.raw`$[IsSquare(X[i..j])] + SD(i+1, j) + SD(i, j-1)$`,
+          String.raw`$\max_{i \le m \le j} \{ SD(i, m) + SD(m+1, j) \}$`], answer: 0,
+          explain: String.raw`The number $X[i..j]$ is seen once (add 1 if it is a square), and then the player picks one end to delete, so take the **max** of the two continuations. Adding both (option C) would count two different deletion sequences at once. Option D splits the number, which this game never does.` },
+        { type: 'short', q: String.raw`What is the square-depth of 1441?`, answer: ['2'],
+          explain: String.raw`1441 is not a square. Deleting the last digit gives $144 = 12^2$, then $14$, then $4 = 2^2$ (or $1 = 1^2$): two squares. The other first move gives $441 = 21^2$, then $44$ or $41$, then $4$ or $1$: also two. So the answer is **2**.` },
+        { type: 'mc', q: String.raw`The resulting algorithm runs in`, choices: [String.raw`$O(n^2)$`, String.raw`$O(n^3)$`, String.raw`$O(n^4)$`, String.raw`$O(2^n)$`], answer: 2,
+          explain: String.raw`$O(n^2)$ subproblems, but each calls IsSquare on up to $n$ digits, which costs $O(n^2)$. Summing $k^2$ over all $\Theta(n^2)$ substrings gives $\Theta(n^4)$. The table work alone would be $O(n^2)$; the black box dominates.` },
+      ],
+      solution: String.raw`**Subproblem.** For $1 \le i \le j \le n$, let $SD(i, j)$ be the maximum number of perfect squares seen while deleting digits one at a time from either end of the number $X[i..j]$, counting $X[i..j]$ itself. Let $SD(i, j) = 0$ when $i > j$ (no digits left). We want $SD(1, n)$.
+
+*Why substrings?* Deleting from the ends always leaves a contiguous block of digits, so every intermediate number is some $X[i..j]$.
+
+**Recurrence.**
+$$SD(i,j) = \begin{cases} 0 & \text{if } i > j \\ \big[ IsSquare(X[i..j]) \big] + \max\{ SD(i+1, j),\ SD(i, j-1) \} & \text{otherwise} \end{cases}$$
+Here $[\cdot]$ is 1 if the condition holds and 0 otherwise. When $i = j$ both options are $SD(\cdot) = 0$: the last digit is seen, then deleted.
+
+**Memoization.** A two-dimensional array $SD[1..n+1, 0..n]$, using only entries with $i \le j + 1$.
+
+**Evaluation order.** By increasing length $j - i$. Equivalently: $i$ from $n$ down to 1 (outer) and $j$ from $i$ up to $n$ (inner). Both dependencies, $(i+1, j)$ and $(i, j-1)$, are shorter intervals.
+
+**Time.** There are $O(n^2)$ entries. Entry $(i, j)$ costs $O((j - i + 1)^2)$ for IsSquare plus $O(1)$ for the max, so the total is
+$$\sum_{1 \le i \le j \le n} O\big((j-i+1)^2\big) = \sum_{k=1}^{n} (n - k + 1)\, O(k^2) = O(n^4).$$
+The space is $O(n^2)$.
+
+**Check on the example.** On 32492 this gives 3: 3249, 324 and 4 are seen along the best path, matching the handout.`,
+    },
+    {
+      id: 'dp2-p2-squaredepth-code', type: 'code', title: 'Practice 2 · Square-depth (code)', difficulty: 2,
+      tags: ['mt2-practice-2', 'interval dp'],
+      prompt: String.raw`Implement the algorithm from [Square-depth](#/problem/dp2-p2-squaredepth).
+
+<code>squareDepth(X)</code> receives a string of decimal digits (length 1 to 12). Return its square-depth. A digit string counts as a perfect square when its numeric value is $k^2$ for some integer $k \ge 0$; leading zeros are allowed (so <code>"04"</code> and <code>"0"</code> are squares).
+
+Examples: <code>squareDepth("32492")</code> returns 3; <code>squareDepth("1441")</code> returns 2.`,
+      fn: 'squareDepth',
+      starter: 'function squareDepth(X) {\n  const isSquare = (s) => { const v = Number(s), r = Math.round(Math.sqrt(v)); return r * r === v; };\n  // return the square-depth of the digit string X\n}\n',
+      reference: function (X) {
+        const isSquare = (s) => { const v = Number(s), r = Math.round(Math.sqrt(v)); return r * r === v; };
+        const n = X.length, SD = Array.from({ length: n + 1 }, () => new Array(n + 1).fill(0));
+        for (let i = n - 1; i >= 0; i--) for (let j = i; j < n; j++) {
+          const a = i + 1 <= j ? SD[i + 1][j] : 0, b = j - 1 >= i ? SD[i][j - 1] : 0;
+          SD[i][j] = (isSquare(X.slice(i, j + 1)) ? 1 : 0) + Math.max(a, b);
+        }
+        return SD[0][n - 1];
+      },
+      tests: [['32492'], ['1441'], ['7'], ['9'], ['1694'], ['100'], ['4914'], ['625144'], ['123456789012']],
+      gen: () => [Array.from({ length: 1 + Math.floor(Math.random() * 9) }, () => '0149625'[Math.floor(Math.random() * 7)]).join('')],
+      hints: [String.raw`Fill $SD[i][j]$ for $i$ from $n-1$ down to 0 and $j$ from $i$ up; treat empty intervals as 0.`],
+      solution: String.raw`~~~pseudo
+function squareDepth(X) {
+  const isSquare = (s) => { const v = Number(s), r = Math.round(Math.sqrt(v)); return r * r === v; };
+  const n = X.length, SD = Array.from({ length: n + 1 }, () => new Array(n + 1).fill(0));
+  for (let i = n - 1; i >= 0; i--)
+    for (let j = i; j < n; j++) {
+      const a = i + 1 <= j ? SD[i + 1][j] : 0;     // delete the left digit
+      const b = j - 1 >= i ? SD[i][j - 1] : 0;     // delete the right digit
+      SD[i][j] = (isSquare(X.slice(i, j + 1)) ? 1 : 0) + Math.max(a, b);
+    }
+  return SD[0][n - 1];
+}
+~~~`,
+    },
+    {
+      id: 'dp2-p3-elmo', type: 'written', title: 'Practice Midterm 3 · Problem 2: Beating Elmo', difficulty: 3,
+      tags: ['mt2-practice-3', 'interval dp', 'games', 'greedy counterexample'], code: 'dp2-p3-elmo-code',
+      prompt: String.raw`You and your eight-year-old nephew Elmo decide to play a simple card game. At the beginning of the game, the cards are dealt face up in a long row. Each card is worth a different number of points, which could be positive, negative, or zero. After all the cards are dealt, you and Elmo take turns removing either the leftmost or rightmost card from the row, until all the cards are gone. At each turn, you can decide which of the two cards to take. The winner of the game is the player that has collected the most points when the game ends.
+
+Having never taken an algorithms class, Elmo follows the obvious greedy strategy: when it's his turn, Elmo *always* takes the card with the higher point value. Your task is to find a strategy that will beat Elmo whenever possible.
+
+**(a)** ***Prove*** that you should not also use the greedy strategy. That is, show that there is a game that you can win, but only if you do *not* follow the same greedy strategy as Elmo. Assume Elmo plays first.
+
+**(b)** Describe and analyze an algorithm to determine, given the initial sequence of cards, the maximum number of points that you can collect playing against Elmo.
+
+*From the official Fall 2026 Midterm 2 Practice 3.*`,
+      rubric: [
+        '(3 pts) (a) A concrete row of cards, the full greedy play showing you do not win, and a full non-greedy play where you win',
+        '(2 pts) (b) English description of the recursive function(s): what they return and whose turn it is',
+        '(3 pts) (b) Correct recurrence: Elmo\'s move is forced (no max), your move is a max; base cases',
+        '(1 pt) (b) Memoization and evaluation order',
+        '(1 pt) (b) Running time',
+      ],
+      hints: [
+        String.raw`For (a), try to set things up so that the greedy card you take uncovers a big card for Elmo.`,
+        String.raw`For (b), the remaining cards always form a contiguous block $A[i..j]$. Use two functions, one for each player's turn. Elmo's function has no choice in it at all.`,
+      ],
+      checks: [
+        { type: 'short', q: String.raw`The cards are $2, 1, 7, 3, 4$ and Elmo moves first. What is the **most** points you can collect?`, answer: ['9'],
+          explain: String.raw`Elmo takes 4. If you copy him and take 3 (bigger than 2), Elmo grabs the 7 and you finish with $3 + 2 = 5$ against Elmo's 12. Instead take the **2**: the row is $1, 7, 3$, so Elmo takes 3, you take 7, and Elmo takes 1. You get $2 + 7 = 9$, Elmo gets $4 + 3 + 1 = 8$, and you win. This answers part (a).` },
+        { type: 'mc', q: String.raw`Let $Elmo(i, j)$ be your best total from cards $A[i..j]$ when it is Elmo's turn. For $i \le j$, $Elmo(i, j) =$`, choices: [
+          String.raw`$You(i+1, j)$ if $A[i] > A[j]$, otherwise $You(i, j-1)$`,
+          String.raw`$\min\{ You(i+1, j),\ You(i, j-1) \}$`,
+          String.raw`$\max\{ You(i+1, j),\ You(i, j-1) \}$`,
+          String.raw`$\max\{ A[i] + You(i+1, j),\ A[j] + You(i, j-1) \}$`], answer: 0,
+          explain: String.raw`Elmo is not an adversary who minimizes your score; he is **predictable**. His move is completely determined by comparing $A[i]$ with $A[j]$, so there is nothing to optimize on his turn. (The min in option B would be right against an optimal opponent, which is a different problem.)` },
+        { type: 'mc', q: String.raw`The DP runs in`, choices: [String.raw`$O(n)$`, String.raw`$O(n^2)$`, String.raw`$O(n^3)$`, String.raw`$O(2^n)$`], answer: 1,
+          explain: String.raw`$O(n^2)$ intervals, two functions, $O(1)$ work each: $O(n^2)$ time.` },
+      ],
+      solution: String.raw`### (a) Do not copy Elmo
+
+Take the row $2, 1, 7, 3, 4$ with Elmo moving first. Elmo always takes the larger end card.
+
+| | Elmo | you | Elmo | you | Elmo | totals (you : Elmo) |
+|---|---|---|---|---|---|---|
+| you play greedy | 4 | 3 | 7 | 2 | 1 | 5 : 12, you lose |
+| you play smart | 4 | **2** | 3 | 7 | 1 | **9 : 8, you win** |
+
+In the greedy line, taking 3 leaves $2, 1, 7$ and Elmo grabs the 7. In the smart line you take the smaller card 2, which leaves $1, 7, 3$: Elmo greedily takes 3 and hands you the 7. So you can win, but only by deviating from greedy on your first move.
+
+### (b) Dynamic programming
+
+The cards left in play are always a contiguous block $A[i..j]$. Define two functions:
+
+- $You(i, j)$ = the maximum total you can collect from the cards $A[i..j]$ when it is **your** turn;
+- $Elmo(i, j)$ = the maximum total you can collect from the cards $A[i..j]$ when it is **Elmo's** turn.
+
+Elmo moves first, so we want $Elmo(1, n)$.
+
+**Recurrences.** Both are 0 when $i > j$. Otherwise:
+$$Elmo(i,j) = \begin{cases} You(i+1, j) & \text{if } A[i] > A[j] \\ You(i, j-1) & \text{otherwise} \end{cases}$$
+$$You(i,j) = \max\big\{ A[i] + Elmo(i+1, j),\ \ A[j] + Elmo(i, j-1) \big\}$$
+(When $i = j$, both ends are the same card; the formulas still work.)
+
+Elmo's function contains **no** max or min: his choice is forced. Your function maximizes your total over your two choices. Since the card values are fixed, maximizing your total is the same as maximizing your margin over Elmo, so this also tells you whether you can win: compare $Elmo(1, n)$ with $\sum A - Elmo(1, n)$.
+
+**Memoization.** Two arrays $You[1..n+1, 0..n]$ and $Elmo[1..n+1, 0..n]$.
+
+**Evaluation order.** By increasing $j - i$: for $i$ from $n$ down to 1, and $j$ from $i$ up to $n$, compute $Elmo(i,j)$ and $You(i,j)$. Each depends only on strictly shorter intervals.
+
+**Time.** $O(n^2)$ entries at $O(1)$ each: **$O(n^2)$** time and space.`,
+    },
+    {
+      id: 'dp2-p3-elmo-code', type: 'code', title: 'Practice 3 · Beating Elmo (code)', difficulty: 3,
+      tags: ['mt2-practice-3', 'interval dp', 'games'],
+      prompt: String.raw`Implement the algorithm from [Beating Elmo](#/problem/dp2-p3-elmo).
+
+<code>beatElmo(A)</code> receives the row of cards (distinct integers, possibly negative). Elmo moves first and always takes the larger of the two end cards. Return the maximum total **you** can collect.
+
+Example: <code>beatElmo([2, 1, 7, 3, 4])</code> returns 9.`,
+      fn: 'beatElmo',
+      starter: 'function beatElmo(A) {\n  // Elmo moves first and always takes the larger end card.\n  // return the maximum number of points you can collect\n}\n',
+      reference: function (A) {
+        const n = A.length;
+        const You = Array.from({ length: n + 1 }, () => new Array(n + 1).fill(0));
+        const El = Array.from({ length: n + 1 }, () => new Array(n + 1).fill(0));
+        const get = (T, i, j) => (i > j ? 0 : T[i][j]);
+        for (let i = n - 1; i >= 0; i--) for (let j = i; j < n; j++) {
+          El[i][j] = A[i] > A[j] ? get(You, i + 1, j) : get(You, i, j - 1);
+          You[i][j] = Math.max(A[i] + get(El, i + 1, j), A[j] + get(El, i, j - 1));
+        }
+        return n ? El[0][n - 1] : 0;
+      },
+      tests: [[[2, 1, 7, 3, 4]], [[5]], [[1, 2]], [[-3, 8, -1, 4, 0, 6]], [[10, -20, 30, -40, 50, -60, 70]], [[]]],
+      gen: () => { const n = Math.floor(Math.random() * 10); const s = new Set(); while (s.size < n) s.add(Math.floor(Math.random() * 41) - 20); return [[...s]]; },
+      hints: [String.raw`Two tables: one for "Elmo to move" (no choice, just look up) and one for "you to move" (max of two options).`],
+      solution: String.raw`~~~pseudo
+function beatElmo(A) {
+  const n = A.length;
+  const You = Array.from({ length: n + 1 }, () => new Array(n + 1).fill(0));
+  const El  = Array.from({ length: n + 1 }, () => new Array(n + 1).fill(0));
+  const get = (T, i, j) => (i > j ? 0 : T[i][j]);
+  for (let i = n - 1; i >= 0; i--)
+    for (let j = i; j < n; j++) {
+      El[i][j]  = A[i] > A[j] ? get(You, i + 1, j) : get(You, i, j - 1);        // Elmo's forced move
+      You[i][j] = Math.max(A[i] + get(El, i + 1, j), A[j] + get(El, i, j - 1));  // your best choice
+    }
+  return n ? El[0][n - 1] : 0;
+}
+~~~`,
+    },
   ],
 });

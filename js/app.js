@@ -386,11 +386,11 @@
   }
 
   /* ------------------------------------------------------------- practice */
-  function problemRow(p, showTopic) {
+  function problemRow(p, showTopic, label) {
     const t = TOPIC.get(p.topic);
     return `<a class="prob-row" href="#/problem/${p.id}">
       <span class="prob-type t-${p.type}">${TYPE_LABEL[p.type] || p.type}</span>
-      <span class="prob-title">${mdi(p.title)}${showTopic ? `<small class="muted"> · ${esc(t.title)}</small>` : ''}</span>
+      <span class="prob-title">${mdi(label || p.title)}${showTopic ? `<small class="muted"> · ${esc(t.title)}</small>` : ''}</span>
       ${diffDots(p.difficulty)} ${statusPill(p.id)}</a>`;
   }
   function practiceView(t, head) {
@@ -460,7 +460,7 @@ A missing transition rejects. Tape is two-way infinite; input starts under the h
       <header class="page-head">
         <div class="crumbs"><a href="#/">Dashboard</a> › <a href="#/topic/${t.id}">${esc(t.title)}</a> › <a href="#/topic/${t.id}/practice">Practice</a></div>
         <div class="head-row"><h1>${mdi(p.title)}</h1><div class="head-nav">${prev ? `<a class="btn sm ghost" href="#/problem/${prev.id}">← Prev</a>` : ''}${next ? `<a class="btn sm ghost" href="#/problem/${next.id}">Next →</a>` : ''}</div></div>
-        <div class="meta-row"><span class="prob-type t-${p.type}">${TYPE_LABEL[p.type]}</span>${diffDots(p.difficulty)}${p.alphabet ? `<span class="muted small">Σ = {${[...p.alphabet].join(', ')}}</span>` : ''}${(p.tags || []).map((x) => `<span class="tag">${esc(x)}</span>`).join('')}<span id="statusPill">${statusPill(id)}</span></div>
+        <div class="meta-row"><span class="prob-type t-${p.type}">${TYPE_LABEL[p.type]}</span>${diffDots(p.difficulty)}${p.alphabet ? `<span class="muted small">Σ = {${[...p.alphabet].join(', ')}}</span>` : ''}${(p.tags || []).map((x) => `<span class="tag">${esc(x)}</span>`).join('')}<span id="statusPill">${statusPill(id)}</span>${(p.checks || []).length ? '<a class="btn sm ghost" href="javascript:void 0" id="toChecks">✔ Quick checks</a>' : ''}${p.code && PROBLEM.get(p.code) ? `<a class="btn sm ghost" href="#/problem/${p.code}">💻 Code version</a>` : ''}</div>
       </header>
       <div class="problem-grid">
         <section class="card prose prompt">${md(p.prompt)}</section>
@@ -499,7 +499,12 @@ A missing transition rejects. Tape is two-way infinite; input starts under the h
           <div id="hints"></div>
           <div id="solution" class="prose solution" ${st.showSol ? '' : 'hidden'}>${st.showSol ? solutionHTML(p) : ''}</div>
         </section>
-      </div>`);
+      </div>
+      ${(p.checks || []).length ? `<section class="card checks" id="checks">
+        <div class="head-row"><h2>Quick checks</h2><span class="muted small" id="checkScore"></span></div>
+        <p class="muted small">Test the key decisions behind this problem. Answer each one, then press Check for instant feedback and an explanation.</p>
+        ${p.checks.map((q, k) => `<div class="check-q" data-ck="${k}"></div>`).join('')}
+      </section>` : ''}`);
     const ans = $('#ans');
     if (ans) {
       ans.addEventListener('keydown', (e) => {
@@ -548,6 +553,30 @@ A missing transition rejects. Tape is two-way infinite; input starts under the h
         const txt = `You are a strict but encouraging teaching assistant for UIUC CS 374 (Algorithms & Models of Computation). Grade my answer to the problem below.\n\n## Problem\n${p.prompt}\n\n## Rubric\n${(p.rubric || []).map((r, k) => `${k + 1}. ${r}`).join('\n')}\n\n## Reference solution (for grading only — do not just repeat it to me)\n${p.solution}\n\n## My answer\n${ans.value || '(empty)'}\n\nFor each rubric item, say whether my answer satisfies it and why. Point out any incorrect claims, missing cases, or gaps in rigor, the way a CS 374 grader would. Give an overall score out of 10 and one or two specific suggestions. If my approach differs from the reference but is correct, accept it.`;
         copyText(txt).then(() => { $('#copyPrompt').textContent = '✓ Copied'; setTimeout(() => { const b = $('#copyPrompt'); if (b) b.textContent = 'Copy AI-grading prompt'; }, 1800); });
       };
+    }
+    // quick checks: small auto-checked questions attached to a problem (results saved per problem)
+    if ((p.checks || []).length) {
+      const score = () => { const s = checkScore(p); $('#checkScore').textContent = `${s.got} of ${s.n} correct`; };
+      // (Re)draws check k in its unanswered state and wires up its button.
+      const setupCheck = (k) => {
+        const q = p.checks[k], box = $(`[data-ck="${k}"]`);
+        const last = (st.checks || {})[k];
+        box.innerHTML = `<div class="quiz-top"><b>Check ${k + 1}</b>${last == null ? '' : pill(last ? '✓ correct last time' : '✗ missed last time', last ? 'good' : 'bad')}</div>${questionHTML(q, 'ck' + k)}<div class="q-actions"><button class="btn sm primary">Check</button></div><div class="ck-fb"></div>`;
+        window.Widgets.hydrate(box);
+        const btn = $('button', box), fb = $('.ck-fb', box);
+        btn.onclick = () => {
+          const resp = readResponse(q, box, 'ck' + k);
+          if (resp === null || (Array.isArray(resp) && !resp.length)) { fb.innerHTML = '<div class="muted small">Pick or type an answer first.</div>'; return; }
+          const ok = checkAnswer(q, resp);
+          st.checks = st.checks || {}; st.checks[k] = ok; save(); touchDay(); score();
+          fb.innerHTML = revealAnswer(q, box, 'ck' + k, ok); window.Widgets.hydrate(fb);
+          btn.textContent = 'Try again'; btn.classList.remove('primary');
+          btn.onclick = () => setupCheck(k);
+        };
+      };
+      p.checks.forEach((_, k) => setupCheck(k));
+      score();
+      const tc = $('#toChecks'); if (tc) tc.onclick = () => $('#checks').scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
     // hints & solution
     let shown = st.hintsShown || 0;
@@ -833,15 +862,29 @@ A missing transition rejects. Tape is two-way infinite; input starts under the h
 
   /* ------------------------------------------------------------ midterm 2 */
   const MT2_TOPICS = ['recursion', 'divide', 'backtracking', 'dp', 'dp2', 'graphs', 'dags', 'shortest', 'mst'].filter((id) => TOPIC.has(id));
-  const MOCKS = [
-    { n: 1, title: 'Mock Midterm A', order: ['recursion', 'graphs', 'dp', 'dags', 'divide'] },
-    { n: 2, title: 'Mock Midterm B', order: ['mst', 'shortest', 'dp2', 'backtracking', 'divide'] },
-    { n: 3, title: 'Mock Midterm C', order: ['recursion', 'graphs', 'dp', 'dp2', 'shortest'] },
+  // Official practice exams list their problems in exam order; the mocks are gathered by tag and ordered by topic.
+  const PRACTICE_EXAMS = [
+    { key: 'p1', title: 'Practice Midterm 1', ids: ['recursion-p1-short', 'dp-p1-quadhopper', 'shortest-p1-highwalk', 'dp-p1-verbal', 'divide-p1-closest'] },
+    { key: 'p2', title: 'Practice Midterm 2', ids: ['dags-p2-structures', 'graphs-p2-rainbow', 'dp2-p2-squaredepth', 'divide-p2-mergek', 'dags-p2-burgoo'] },
+    { key: 'p3', title: 'Practice Midterm 3', ids: ['recursion-p3-short', 'dp2-p3-elmo', 'graphs-p3-remote', 'divide-p3-parity', 'shortest-p3-zigzag'] },
   ];
+  const MOCKS = [
+    { key: 'm1', tag: 'mt2-mock-1', title: 'Mock Midterm A', order: ['recursion', 'graphs', 'dp', 'dags', 'divide'] },
+    { key: 'm2', tag: 'mt2-mock-2', title: 'Mock Midterm B', order: ['mst', 'shortest', 'dp2', 'backtracking', 'divide'] },
+    { key: 'm3', tag: 'mt2-mock-3', title: 'Mock Midterm C', order: ['recursion', 'graphs', 'dp', 'dp2', 'shortest'] },
+  ];
+  const EXAMS = [...PRACTICE_EXAMS, ...MOCKS];
   const MOCK_MINS = 120;
-  function mockProblems(m) {
-    const rank = (p) => { const i = m.order.indexOf(p.topic); return i < 0 ? 99 : i; };
-    return [...PROBLEM.values()].filter((p) => (p.tags || []).includes('mt2-mock-' + m.n)).sort((a, b) => rank(a) - rank(b));
+  function examProblems(e) {
+    if (e.ids) return e.ids.map((id) => PROBLEM.get(id)).filter(Boolean);
+    const rank = (p) => { const i = e.order.indexOf(p.topic); return i < 0 ? 99 : i; };
+    return [...PROBLEM.values()].filter((p) => (p.tags || []).includes(e.tag)).sort((a, b) => rank(a) - rank(b));
+  }
+  // Timers saved before practice exams existed stored a mock number instead of a key.
+  const timerKey = (T) => (T ? T.exam || (T.mock != null ? 'm' + T.mock : null) : null);
+  function checkScore(p) {
+    const n = (p.checks || []).length, got = Object.values((S.problems[p.id] || {}).checks || {}).filter(Boolean).length;
+    return { n, got };
   }
   const fmtClock = (secs) => { secs = Math.max(0, Math.round(secs)); const h = Math.floor(secs / 3600), m = Math.floor((secs % 3600) / 60), s = secs % 60; return `${h ? h + ':' : ''}${String(m).padStart(h ? 2 : 1, '0')}:${String(s).padStart(2, '0')}`; };
   function mockTimerTick() {
@@ -852,7 +895,7 @@ A missing transition rejects. Tape is two-way infinite; input starts under the h
     const left = T.mins * 60 - (Date.now() - T.start) / 1000;
     if (!/^#\/midterm2/.test(location.hash)) el.hidden = false;
     el.classList.toggle('low', left < 600);
-    el.textContent = left > 0 ? `⏱ ${(MOCKS.find((m) => m.n === T.mock) || {}).title || 'Mock'} · ${fmtClock(left)} left` : `⏱ Time's up: pens down and self-grade`;
+    el.textContent = left > 0 ? `⏱ ${(EXAMS.find((e) => e.key === timerKey(T)) || {}).title || 'Exam'} · ${fmtClock(left)} left` : `⏱ Time's up: pens down and self-grade`;
     const inPage = document.getElementById('mt2Clock'); if (inPage) inPage.textContent = el.textContent;
   }
   function pageMidterm2() {
@@ -866,21 +909,28 @@ A missing transition rejects. Tape is two-way infinite; input starts under the h
     if (date) { const d = new Date(date + 'T00:00:00'), now = new Date(); now.setHours(0, 0, 0, 0); daysLeft = Math.round((d - now) / DAY); }
     const T = S.settings.mt2Timer;
     const selfSummary = (ps) => { const c = { good: 0, partial: 0, missed: 0 }; ps.forEach((p) => { const s = S.problems[p.id]; if (s && c[s.self] != null) c[s.self]++; }); return c; };
-    const mockCards = MOCKS.map((m) => {
-      const ps = mockProblems(m);
+    const examCard = (e) => {
+      const ps = examProblems(e);
       if (!ps.length) return '';
-      const c = selfSummary(ps), active = T && T.mock === m.n;
+      const c = selfSummary(ps), active = timerKey(T) === e.key;
+      const ck = ps.reduce((a, p) => { const s = checkScore(p); return { n: a.n + s.n, got: a.got + s.got }; }, { n: 0, got: 0 });
+      const extras = (p) => {
+        const s = checkScore(p), code = p.code && PROBLEM.get(p.code);
+        return `${s.n ? `<span class="pill${s.got === s.n ? ' good' : s.got ? ' warn' : ''}" title="Quick checks answered correctly">✔ ${s.got}/${s.n}</span>` : ''}${code ? `<a class="pill code-pill" href="#/problem/${code.id}" title="Implement it: auto-graded code version">💻 code${isSolved(code.id) ? ' ✓' : ''}</a>` : ''}`;
+      };
       return `<div class="card mock-card${active ? ' active' : ''}">
-        <div class="head-row"><h3>${esc(m.title)}</h3><span class="muted small">${ps.length} problems · ${MOCK_MINS} min</span></div>
-        <div class="prob-list compact">${ps.map((p, i) => `<div class="mock-row"><b class="mock-num">${i + 1}</b>${problemRow(p, true)}</div>`).join('')}</div>
-        <p class="small muted">Self-graded: ${c.good} got it · ${c.partial} partial · ${c.missed} missed</p>
-        <div class="q-actions">${active ? `<button class="btn bad" data-stop="${m.n}">Stop timer</button><span class="timer" id="mt2Clock"></span>` : `<button class="btn primary" data-mock="${m.n}">Start ${MOCK_MINS}-minute timer</button>`}</div>
+        <div class="head-row"><h3>${esc(e.title)}</h3><span class="muted small">${ps.length} problems · ${MOCK_MINS} min</span></div>
+        <div class="prob-list compact">${ps.map((p, i) => `<div class="mock-row"><b class="mock-num">${i + 1}</b>${problemRow(p, true, p.title.replace(/^Practice Midterm \d+ · Problem \d+: /, ''))}${e.ids ? `<span class="mock-extras">${extras(p)}</span>` : ''}</div>`).join('')}</div>
+        <p class="small muted">Self-graded: ${c.good} got it · ${c.partial} partial · ${c.missed} missed${ck.n ? ` · quick checks ${ck.got}/${ck.n}` : ''}</p>
+        <div class="q-actions">${active ? `<button class="btn bad" data-stop="${e.key}">Stop timer</button><span class="timer" id="mt2Clock"></span>` : `<button class="btn primary" data-mock="${e.key}">Start ${MOCK_MINS}-minute timer</button>`}</div>
       </div>`;
-    }).join('');
+    };
+    const practiceCards = PRACTICE_EXAMS.map(examCard).join('');
+    const mockCards = MOCKS.map(examCard).join('');
     const jump = 'h-midterm-2-exam-patterns';
     setMain(`
       <header class="page-head"><h1>Midterm 2</h1>
-        <p class="muted">Topics 10–18: recursion, divide &amp; conquer, backtracking, dynamic programming, graph search, DAGs &amp; SCCs, shortest paths, and MSTs. NP-hardness is left for the final. This scope is an assumption, so check the course website for your semester's official list.</p></header>
+        <p class="muted">Topics 10–18: recursion, divide &amp; conquer, backtracking, dynamic programming, graph search, DAGs &amp; SCCs, shortest paths, and MSTs. The official practice exams cover all of these except MSTs, which are kept here in case they appear on your exam. NP-hardness is left for the final.</p></header>
       <div class="stats mt2-stats">
         <div class="stat"><b>${daysLeft == null ? '—' : daysLeft < 0 ? 'done' : daysLeft}</b><span>${daysLeft == null ? 'set your exam date →' : daysLeft === 1 ? 'day left' : 'days left'}</span>
           <input type="date" id="mt2Date" value="${esc(date)}" aria-label="Midterm 2 date"></div>
@@ -901,6 +951,10 @@ A missing transition rejects. Tape is two-way infinite; input starts under the h
         <div id="mt2Box"></div>
       </div>
 
+      ${practiceCards ? `<h2 class="sec">Official practice midterms (Fall 2026)</h2>
+      <p class="muted">The three practice exams from the course, with worked solutions written for this site (the handouts had no answer key). Each problem has <b>quick checks</b>: multiple-choice and short-answer questions with instant feedback on the key decisions. Algorithmic problems also have a <b>💻 code</b> version that is auto-graded against test cases. Try the written answer first, then the checks, then the solution.</p>
+      <div class="mock-grid">${practiceCards}</div>` : ''}
+
       <h2 class="sec">Mock midterms</h2>
       <p class="muted">Each mock has five exam-length written problems. Work them closed-book against the timer, then open each one and self-grade against its 10-point rubric. The timer keeps running while you move between pages.</p>
       <div class="mock-grid">${mockCards || '<div class="card"><p class="muted">No mock problems found.</p></div>'}</div>
@@ -920,9 +974,9 @@ A missing transition rejects. Tape is two-way infinite; input starts under the h
       <div class="card prose">${md(String.raw`### A plan for the final week
 1. **Diagnose (day 1).** Take the timed quiz and note your weakest topics in the results.
 2. **Patch the weak topics (days 2–4).** For each one, read its *Midterm 2 exam patterns* section, do the two "try it first" examples before you reveal them, and then work three written problems without looking at hints.
-3. **Mock A (day 4 or 5)** under the timer. Self-grade honestly with the rubric. A missing running time or a missing base case costs points on the real exam too.
-4. **Re-study what Mock A exposed, then Mock B (day 6).**
-5. **Mock C (two days before).** The day before, only review flashcards and the Midterm 2 cheat sheet.
+3. **Official Practice Midterm 1 (day 4)** under the timer, then the quick checks and the solutions. Self-grade honestly with the rubric. A missing running time or a missing base case costs points on the real exam too.
+4. **Practice Midterms 2 and 3 (days 5–6)**, re-studying whatever the previous one exposed. Use the mocks as extra exams if you have time.
+5. **Two days before:** one more mock under the timer. The day before, only review flashcards and the Midterm 2 cheat sheet.
 
 **For every DP answer, write:** an English description of the subproblem, the recurrence with base cases, the memo structure, the evaluation order, the running time, and where the final answer is.
 
@@ -952,7 +1006,7 @@ A missing transition rejects. Tape is two-way infinite; input starts under the h
     };
     $$('[data-mock]').forEach((b) => { b.onclick = () => {
       if (S.settings.mt2Timer && !confirm('Another mock timer is running. Replace it?')) return;
-      S.settings.mt2Timer = { mock: +b.dataset.mock, start: Date.now(), mins: MOCK_MINS }; save(); pageMidterm2(); mockTimerTick();
+      S.settings.mt2Timer = { exam: b.dataset.mock, start: Date.now(), mins: MOCK_MINS }; save(); pageMidterm2(); mockTimerTick();
     }; });
     $$('[data-stop]').forEach((b) => { b.onclick = () => {
       const T2 = S.settings.mt2Timer; const used = T2 ? fmtClock((Date.now() - T2.start) / 1000) : '';

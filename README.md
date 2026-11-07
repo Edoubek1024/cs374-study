@@ -50,6 +50,7 @@ Lessons include **"try it first" worked examples**: the solution stays hidden un
 - **Midterm 2:** a prep hub for topics 10–18. It has:
   - a countdown to your exam date and a readiness score;
   - a 25-question timed quiz and a random 5-problem set;
+  - the three **official Fall 2026 practice midterms**. Every problem has a worked solution (the handouts came without an answer key) and **quick checks**: multiple-choice and short-answer questions with instant feedback. Algorithmic problems also have an auto-graded **code version**;
   - three full **mock midterms** (5 written problems each, with 10-point rubrics) and a 120-minute timer that stays on screen while you move between problems;
   - a per-topic checklist that links to each lesson's *Midterm 2 exam patterns* section;
   - a printable cheat sheet for Midterm 2 topics only.

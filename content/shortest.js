@@ -2156,6 +2156,243 @@ $$D(v, h) = \min_{e = u \to v,\ \tau(e) \le h} D(u, h - \tau(e)) + c(e).$$
 Every walk to $(v, j)$ with $j \ge 1$ is a walk to some $(u', j - 1)$, one job edge into layer $j$, and then non-job edges inside layer $j$; so this computes exactly the layered distances. Multi-source Dijkstra with arbitrary (even negative) initial keys is correct: it is ordinary Dijkstra from a super-source $z_j$ with an edge $z_j \to u$ of length $B_j(u)$, and negative edges leaving the source are harmless (equivalently, add a constant $M$ to every $B_j(u)$: every path from $z_j$ uses exactly one such edge, so all paths shift by the same $M$).
 
 *Time.* $k + 1$ Dijkstra runs on at most $E$ edges plus $O(E)$ per layer to compute the $B_j$: $O(kE \log V)$.`
+    },
+    {
+      id: 'shortest-p1-highwalk', type: 'written', title: 'Practice Midterm 1 · Problem 3: The highest walk to work', difficulty: 2,
+      tags: ['mt2-practice-1', 'dijkstra', 'modeling'], code: 'shortest-p1-highwalk-code',
+      prompt: String.raw`After moving to a new city, you decide to walk from your home to your new office. To get a good daily workout, you want to reach the *highest* possible altitude during your walk (to maximize exercise), while keeping the total length of your walk below some threshold (to get to your office on time). Describe and analyze an algorithm to compute the best possible walking route.
+
+Your input consists of an undirected graph $G$, where each vertex $v$ has a height $h(v)$ and each edge $e$ has a positive length $\ell(e)$, along with a start vertex $s$, a target vertex $t$, and a maximum length $L$. Your algorithm should return the *maximum height reachable* by a walk from $s$ to $t$ in $G$ whose total length is at most $L$.
+
+*From the official Fall 2026 Midterm 2 Practice 1.*`,
+      rubric: [
+        '(3 pts) Compute shortest-path distances from s and from t (two runs of Dijkstra)',
+        '(3 pts) Keep exactly the vertices v with dist(s, v) + dist(v, t) <= L and return the maximum h(v) among them',
+        '(2 pts) Correctness: both directions (such a v is on a short enough walk; any vertex on a short enough walk satisfies the inequality)',
+        '(2 pts) Running time O(E log V)',
+      ],
+      hints: [
+        String.raw`Fix a vertex $v$. What is the shortest possible length of an $s$–$t$ walk that visits $v$?`,
+        String.raw`Shortest $s \leadsto v$, then shortest $v \leadsto t$. Because the graph is undirected, one Dijkstra from $s$ and one from $t$ give every such length.`,
+      ],
+      checks: [
+        { type: 'mc', q: String.raw`Which test decides whether a walk from $s$ to $t$ of length at most $L$ can visit vertex $v$?`, choices: [
+          String.raw`$dist(s, v) + dist(v, t) \le L$`,
+          String.raw`$dist(s, v) \le L$`,
+          String.raw`$v$ lies on some shortest $s$–$t$ path`,
+          String.raw`$dist(s, t) + 2\,dist(t, v) \le L$`], answer: 0,
+          explain: String.raw`The cheapest $s$–$t$ walk through $v$ goes from $s$ to $v$ by a shortest path and then from $v$ to $t$ by a shortest path. Walks may repeat vertices, so this combination is always allowed. Option B forgets that you still have to get to $t$. Option C is too strict: a detour that is not on any shortest path is fine if the total is at most $L$.` },
+        { type: 'tf', q: String.raw`The highest vertex on a shortest $s$–$t$ path is always the answer.`, answer: false,
+          explain: String.raw`A short detour to a much higher vertex can stay within the budget $L$. The answer considers **every** vertex that fits in the budget, not only the vertices on shortest paths.` },
+        { type: 'mc', q: String.raw`The running time (binary-heap Dijkstra) is`, choices: [String.raw`$O(V + E)$`, String.raw`$O(E \log V)$`, String.raw`$O(VE)$`, String.raw`$O(V^2 \log V)$`], answer: 1,
+          explain: String.raw`Two Dijkstra runs at $O(E \log V)$ each, plus an $O(V)$ scan. Running Dijkstra from every vertex $v$ would also work but costs $O(VE \log V)$.` },
+      ],
+      solution: String.raw`**Algorithm.**
+
+1. Run Dijkstra's algorithm from $s$ to compute $d_s(v) = dist(s, v)$ for every vertex $v$.
+2. Run Dijkstra's algorithm from $t$ to compute $d_t(v) = dist(v, t)$. The graph is undirected, so distances to $t$ equal distances from $t$.
+3. Return $\max\{ h(v) : d_s(v) + d_t(v) \le L \}$. If no vertex qualifies (equivalently, $dist(s, t) > L$), report that there is no valid walk.
+
+**Correctness.** We show that a walk from $s$ to $t$ of length at most $L$ visits $v$ **if and only if** $d_s(v) + d_t(v) \le L$.
+
+- If such a walk visits $v$, its part before $v$ is a walk from $s$ to $v$, so it has length at least $d_s(v)$. Its part after $v$ has length at least $d_t(v)$. So $d_s(v) + d_t(v) \le L$.
+- Conversely, if $d_s(v) + d_t(v) \le L$, a shortest path from $s$ to $v$ followed by a shortest path from $v$ to $t$ is a walk of length at most $L$ that visits $v$. Walks may repeat vertices, so the two paths do not need to be disjoint.
+
+So the answer is the largest height among exactly those vertices. The vertices $s$ and $t$ themselves qualify whenever $dist(s, t) \le L$.
+
+**Time.** Two Dijkstra runs with a binary heap: $O(E \log V)$. The final scan is $O(V)$. Total: **$O(E \log V)$**.
+
+> **Exam tip.** "Walk", "path that may revisit vertices" and "route" usually mean repeats are allowed. That is what makes splitting at $v$ into two independent shortest paths legal.`,
+    },
+    {
+      id: 'shortest-p1-highwalk-code', type: 'code', title: 'Practice 1 · The highest walk to work (code)', difficulty: 2,
+      tags: ['mt2-practice-1', 'dijkstra'],
+      prompt: String.raw`Implement the algorithm from [The highest walk to work](#/problem/shortest-p1-highwalk).
+
+<code>highestWalk(n, edges, h, s, t, L)</code>: vertices are <code>0..n-1</code>, each edge <code>[u, v, len]</code> is **undirected** with a positive length, <code>h[v]</code> is the height of $v$. Return the maximum height of a vertex on some walk from <code>s</code> to <code>t</code> of total length at most <code>L</code>, or <code>null</code> if no such walk exists.
+
+Example: <code>highestWalk(4, [[0,1,1],[1,3,1],[0,2,2]], [5,3,9,1], 0, 3, 6)</code> returns 9 (go 0→2→0→1→3, total length 6).
+
+A simple $O(V^2)$ Dijkstra is fine here.`,
+      fn: 'highestWalk',
+      starter: 'function highestWalk(n, edges, h, s, t, L) {\n  // undirected edges [u, v, len]; return the max height reachable, or null\n}\n',
+      reference: function (n, edges, h, s, t, L) {
+        const adj = Array.from({ length: n }, () => []);
+        for (const [u, v, w] of edges) { adj[u].push([v, w]); adj[v].push([u, w]); }
+        const dij = (src) => {
+          const d = new Array(n).fill(Infinity), done = new Array(n).fill(false); d[src] = 0;
+          for (let it = 0; it < n; it++) {
+            let u = -1; for (let v = 0; v < n; v++) if (!done[v] && (u < 0 || d[v] < d[u])) u = v;
+            if (u < 0 || d[u] === Infinity) break; done[u] = true;
+            for (const [v, w] of adj[u]) if (d[u] + w < d[v]) d[v] = d[u] + w;
+          }
+          return d;
+        };
+        const ds = dij(s), dt = dij(t);
+        let best = null;
+        for (let v = 0; v < n; v++) if (ds[v] + dt[v] <= L && (best === null || h[v] > best)) best = h[v];
+        return best;
+      },
+      tests: [
+        [4, [[0, 1, 1], [1, 3, 1], [0, 2, 2]], [5, 3, 9, 1], 0, 3, 6],
+        [4, [[0, 1, 1], [1, 3, 1], [0, 2, 2]], [5, 3, 9, 1], 0, 3, 5],
+        [3, [[0, 1, 4]], [1, 2, 3], 0, 2, 100],
+        [1, [], [7], 0, 0, 0],
+        [5, [[0, 1, 2], [1, 2, 2], [2, 3, 2], [3, 4, 2], [0, 4, 3]], [0, 10, 20, 10, 0], 0, 4, 11],
+      ],
+      gen: () => {
+        const n = 1 + Math.floor(Math.random() * 8), m = Math.floor(Math.random() * 14);
+        const edges = Array.from({ length: m }, () => [Math.floor(Math.random() * n), Math.floor(Math.random() * n), 1 + Math.floor(Math.random() * 6)]);
+        return [n, edges, Array.from({ length: n }, () => Math.floor(Math.random() * 30)), Math.floor(Math.random() * n), Math.floor(Math.random() * n), Math.floor(Math.random() * 15)];
+      },
+      hints: [String.raw`Run Dijkstra from s and from t, then keep the vertices with ds[v] + dt[v] <= L.`],
+      solution: String.raw`~~~pseudo
+function highestWalk(n, edges, h, s, t, L) {
+  const adj = Array.from({ length: n }, () => []);
+  for (const [u, v, w] of edges) { adj[u].push([v, w]); adj[v].push([u, w]); }
+  const dij = (src) => {                     // O(V^2) Dijkstra
+    const d = new Array(n).fill(Infinity), done = new Array(n).fill(false); d[src] = 0;
+    for (let it = 0; it < n; it++) {
+      let u = -1;
+      for (let v = 0; v < n; v++) if (!done[v] && (u < 0 || d[v] < d[u])) u = v;
+      if (u < 0 || d[u] === Infinity) break;
+      done[u] = true;
+      for (const [v, w] of adj[u]) if (d[u] + w < d[v]) d[v] = d[u] + w;
     }
-  ]
+    return d;
+  };
+  const ds = dij(s), dt = dij(t);
+  let best = null;
+  for (let v = 0; v < n; v++) if (ds[v] + dt[v] <= L && (best === null || h[v] > best)) best = h[v];
+  return best;
+}
+~~~`,
+    },
+    {
+      id: 'shortest-p3-zigzag', type: 'written', title: 'Practice Midterm 3 · Problem 5: Shortest zigzag walk', difficulty: 3,
+      tags: ['mt2-practice-3', 'dijkstra', 'product graph', 'modeling'], code: 'shortest-p3-zigzag-code',
+      prompt: String.raw`A *zigzag walk* in a directed graph $G$ is a sequence of vertices connected by edges in $G$, but the edges alternately point forward and backward along the sequence. Specifically, the first edge points forward, the second edge points backward, and so on. The *length* of a zigzag walk is the sum of the weights of its edges, both forward and backward.
+
+For example, the graph below (redrawn from the handout) contains the zigzag walk $a \to b \leftarrow d \to f \leftarrow c \to e$. If every edge has weight 1, this zigzag walk has length 5.
+
+~~~graph
+directed
+a b
+c a
+b c
+b e
+b f
+c e
+c f
+d b
+e d
+d f
+~~~
+
+Suppose you are given a directed graph $G$ with non-negatively weighted edges, along with two vertices $s$ and $t$. Describe and analyze an algorithm to find the shortest zigzag walk from $s$ to $t$ in $G$.
+
+*From the official Fall 2026 Midterm 2 Practice 3.*`,
+      rubric: [
+        '(4 pts) Precise new graph: two copies of each vertex (next edge forward / next edge backward) and the edges each original edge creates',
+        '(2 pts) Run Dijkstra from the right start copy; answer = min over the copies of t',
+        '(2 pts) Correctness: zigzag walks in G correspond to walks in the new graph with the same length',
+        '(2 pts) Running time O(E log V)',
+      ],
+      hints: [
+        String.raw`Which direction the next edge must point depends on how many edges have been used so far. Keep track of exactly that much.`,
+        String.raw`Use vertices $(v, F)$ ("the next edge must be traversed forward") and $(v, B)$ ("the next edge must be traversed backward").`,
+      ],
+      checks: [
+        { type: 'mc', q: String.raw`With states $(v, F)$ and $(v, B)$ as in the hint, which edges does an original edge $u \to v$ of weight $w$ create?`, choices: [
+          String.raw`$(u, F) \to (v, B)$ and $(v, B) \to (u, F)$, both of weight $w$`,
+          String.raw`$(u, F) \to (v, B)$ and $(u, B) \to (v, F)$, both of weight $w$`,
+          String.raw`$(u, F) \to (v, F)$ and $(v, B) \to (u, B)$, both of weight $w$`,
+          String.raw`Only $(u, F) \to (v, B)$, of weight $w$`], answer: 0,
+          explain: String.raw`Traversing $u \to v$ **forward** moves from $u$ to $v$ and must happen in an F state; afterwards the next edge must go backward, so you land in $(v, B)$. Traversing it **backward** moves from $v$ to $u$ and must happen in a B state; afterwards you are in $(u, F)$. Option D forgets the backward use of the edge.` },
+        { type: 'mc', q: String.raw`Where does the search start, and where is the answer read off?`, choices: [
+          String.raw`Start at $(s, F)$; answer $= \min\{ dist(t, F),\ dist(t, B) \}$`,
+          String.raw`Start at $(s, F)$; answer $= dist(t, B)$`,
+          String.raw`Start at $(s, B)$; answer $= dist(t, F)$`,
+          String.raw`Start at both copies of $s$; answer $= dist(t, F)$`], answer: 0,
+          explain: String.raw`The first edge must point forward, so start at $(s, F)$. The walk may end after an odd number of edges (arriving at $(t, B)$) or an even number (arriving at $(t, F)$), so take the smaller of the two.` },
+        { type: 'tf', q: String.raw`Dijkstra's algorithm is a valid choice on the new graph.`, answer: true,
+          explain: String.raw`Every new edge has the same weight as some original edge, so all weights are non-negative. (If all weights were 1, BFS would be enough.)` },
+      ],
+      solution: String.raw`**Graph.** Build a directed graph $H$:
+
+- **Vertices:** two copies of each $v \in V$. $(v, F)$ means "at $v$, and the next edge must point **forward**"; $(v, B)$ means "at $v$, and the next edge must point **backward**". That is $2V$ vertices.
+- **Edges:** for each edge $u \to v$ of weight $w$ in $G$, add
+  - $(u, F) \to (v, B)$ with weight $w$: use the edge forward, from $u$ to $v$;
+  - $(v, B) \to (u, F)$ with weight $w$: use the edge backward, from $v$ to $u$.
+
+  That is $2E$ edges, all with non-negative weights.
+
+**Correspondence.** Zigzag walks in $G$ starting at $s$ (first edge forward) correspond exactly to walks in $H$ starting at $(s, F)$, and corresponding walks have the same length. Each step of a zigzag walk is legal in exactly the state that the alternation requires, and it leads to the opposite state.
+
+**Algorithm.** Run Dijkstra's algorithm on $H$ from $(s, F)$. Return $\min\{ dist_H((s,F), (t,F)),\ dist_H((s,F), (t,B)) \}$, recovering the walk from the predecessor pointers if the walk itself is wanted. If both distances are $\infty$, there is no zigzag walk from $s$ to $t$.
+
+**Time.** $H$ has $2V$ vertices and $2E$ edges, so Dijkstra takes $O(E \log V)$ with a binary heap. Building $H$ takes $O(V + E)$. Total: **$O(E \log V)$**.
+
+**Check on the example.** $a \to b \leftarrow d \to f \leftarrow c \to e$ becomes $(a,F) \to (b,B) \to (d,F) \to (f,B) \to (c,F) \to (e,B)$ in $H$, using the edges $a{\to}b$ (forward), $d{\to}b$ (backward), $d{\to}f$ (forward), $c{\to}f$ (backward), $c{\to}e$ (forward).`,
+    },
+    {
+      id: 'shortest-p3-zigzag-code', type: 'code', title: 'Practice 3 · Shortest zigzag walk (code)', difficulty: 3,
+      tags: ['mt2-practice-3', 'dijkstra', 'product graph'],
+      prompt: String.raw`Implement the algorithm from [Shortest zigzag walk](#/problem/shortest-p3-zigzag).
+
+<code>zigzag(n, edges, s, t)</code>: vertices are <code>0..n-1</code>, each edge <code>[u, v, w]</code> is directed $u \to v$ with weight $w \ge 0$. Return the length of the shortest zigzag walk from <code>s</code> to <code>t</code> (first edge forward, then alternating), or <code>null</code> if there is none. If <code>s === t</code>, the empty walk counts and the answer is 0.
+
+Example: <code>zigzag(3, [[0,1,2],[2,1,5]], 0, 2)</code> returns 7 (0 → 1 forward, then 1 ← 2 backward).
+
+A simple $O(V^2)$ Dijkstra on the doubled graph is fine.`,
+      fn: 'zigzag',
+      starter: 'function zigzag(n, edges, s, t) {\n  // return the length of the shortest zigzag walk from s to t, or null\n}\n',
+      reference: function (n, edges, s, t) {
+        // state 2v = (v, next edge forward), 2v+1 = (v, next edge backward)
+        const N = 2 * n, adj = Array.from({ length: N }, () => []);
+        for (const [u, v, w] of edges) { adj[2 * u].push([2 * v + 1, w]); adj[2 * v + 1].push([2 * u, w]); }
+        const d = new Array(N).fill(Infinity), done = new Array(N).fill(false); d[2 * s] = 0;
+        for (let it = 0; it < N; it++) {
+          let u = -1; for (let x = 0; x < N; x++) if (!done[x] && (u < 0 || d[x] < d[u])) u = x;
+          if (u < 0 || d[u] === Infinity) break; done[u] = true;
+          for (const [v, w] of adj[u]) if (d[u] + w < d[v]) d[v] = d[u] + w;
+        }
+        const best = Math.min(d[2 * t], d[2 * t + 1]);
+        return best === Infinity ? null : best;
+      },
+      tests: [
+        [3, [[0, 1, 2], [2, 1, 5]], 0, 2],
+        [3, [[0, 1, 1], [1, 2, 1]], 0, 2],
+        [6, [[0, 1, 1], [2, 0, 1], [1, 2, 1], [1, 4, 1], [1, 5, 1], [2, 4, 1], [2, 5, 1], [3, 1, 1], [4, 3, 1], [3, 5, 1]], 0, 4],
+        [2, [], 1, 1],
+        [4, [[0, 1, 3], [2, 1, 1], [2, 3, 4], [0, 3, 10]], 0, 3],
+      ],
+      gen: () => {
+        const n = 1 + Math.floor(Math.random() * 7), m = Math.floor(Math.random() * 14);
+        return [n, Array.from({ length: m }, () => [Math.floor(Math.random() * n), Math.floor(Math.random() * n), Math.floor(Math.random() * 6)]), Math.floor(Math.random() * n), Math.floor(Math.random() * n)];
+      },
+      hints: [String.raw`Double the vertices: (v, forward-next) and (v, backward-next). Edge u→v gives (u,F)→(v,B) and (v,B)→(u,F).`],
+      solution: String.raw`~~~pseudo
+function zigzag(n, edges, s, t) {
+  // state 2v = (v, next edge forward), 2v+1 = (v, next edge backward)
+  const N = 2 * n, adj = Array.from({ length: N }, () => []);
+  for (const [u, v, w] of edges) {
+    adj[2 * u].push([2 * v + 1, w]);        // use u->v forward
+    adj[2 * v + 1].push([2 * u, w]);        // use u->v backward (walk from v to u)
+  }
+  const d = new Array(N).fill(Infinity), done = new Array(N).fill(false);
+  d[2 * s] = 0;
+  for (let it = 0; it < N; it++) {
+    let u = -1;
+    for (let x = 0; x < N; x++) if (!done[x] && (u < 0 || d[x] < d[u])) u = x;
+    if (u < 0 || d[u] === Infinity) break;
+    done[u] = true;
+    for (const [v, w] of adj[u]) if (d[u] + w < d[v]) d[v] = d[u] + w;
+  }
+  const best = Math.min(d[2 * t], d[2 * t + 1]);
+  return best === Infinity ? null : best;
+}
+~~~`,
+    },
+  ],
 });

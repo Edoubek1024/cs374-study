@@ -2134,5 +2134,221 @@ function cheapPalindrome(s, cost) {
 ~~~
 $O(n^2)$ time and space. Taking the min over all three options (instead of always pairing equal ends) is what makes it correct for position-dependent costs.`,
     },
+    {
+      id: 'dp-p1-quadhopper', type: 'written', title: 'Practice Midterm 1 · Problem 2: Quadhopper', difficulty: 2,
+      tags: ['mt2-practice-1', 'dp', 'greedy counterexample'], code: 'dp-p1-quadhopper-code',
+      prompt: String.raw`*Quadhopper* is a solitaire game played on a row of $n$ squares. Each square contains four positive integers. The player begins by placing a token on the leftmost square. On each move, the player chooses one of the numbers on the token's current square, and then moves the token that number of squares to the right. The game ends when the token moves past the rightmost square. The object of the game is to make as many moves as possible before the game ends.
+
+(The handout shows a 14-square puzzle with a legal sequence of six moves, and notes that six is **not** the longest possible.)
+
+**(a)** ***Prove*** that the obvious greedy strategy (always choose the smallest number) does not give the largest possible number of moves for every quadhopper puzzle.
+
+**(b)** Describe and analyze an efficient algorithm to find the largest possible number of legal moves for a given quadhopper puzzle.
+
+*From the official Fall 2026 Midterm 2 Practice 1.*`,
+      rubric: [
+        '(3 pts) (a) A concrete puzzle, the greedy number of moves, and a strictly better sequence of moves',
+        '(2 pts) (b) Clear English description of the recursive function and how to call it',
+        '(2 pts) (b) Correct recurrence with base case',
+        '(1 pt) (b) Memoization structure and evaluation order',
+        '(1 pt) (b) Running time',
+        '(1 pt) (b) Treats the final move off the board consistently',
+      ],
+      hints: [
+        String.raw`For (a), make the smallest number on the first square lead to a square where every number is huge.`,
+        String.raw`For (b), the only thing that matters about the game so far is which square the token is on now.`,
+      ],
+      checks: [
+        { type: 'short', q: String.raw`A 4-square puzzle has squares $\{1, 2, 10, 11\}$, $\{10, 11, 12, 13\}$, $\{1, 10, 11, 12\}$, $\{10, 11, 12, 13\}$. What is the **largest** number of moves (counting the move that leaves the board)?`, answer: ['3'],
+          explain: String.raw`Take 2 (square 1 to 3), then 1 (square 3 to 4), then any number (off the board): **3** moves. Greedy takes 1 first (to square 2), where every number leaves the board: only 2 moves. This is a complete answer to part (a).` },
+        { type: 'mc', q: String.raw`Which subproblem leads to an efficient algorithm?`, choices: [String.raw`$Hops(i)$ = the most moves possible starting with the token on square $i$`, String.raw`$Hops(i, m)$ = whether exactly $m$ moves can reach square $i$`, String.raw`$Hops(i)$ = the most moves possible using only squares $1..i$`, String.raw`$Hops(i, d)$ = the most moves if the previous jump had length $d$`], answer: 0,
+          explain: String.raw`The future depends only on the current square, so one index is enough: $Hops(i) = 1 + \max_d Hops(i + d)$ over the four numbers $d$ on square $i$, with $Hops(i) = 0$ for $i > n$. The second option works but wastes a factor of $n$; the fourth adds state that has no effect on the future.` },
+        { type: 'mc', q: String.raw`The resulting algorithm runs in`, choices: [String.raw`$O(n)$`, String.raw`$O(n \log n)$`, String.raw`$O(n^2)$`, String.raw`$O(4^n)$`], answer: 0,
+          explain: String.raw`$n$ subproblems, each a max over 4 options: $O(n)$. Without memoization the recursion branches 4 ways and can take exponential time.` },
+      ],
+      solution: String.raw`### (a) Greedy fails
+
+Consider the puzzle with four squares:
+
+| square | 1 | 2 | 3 | 4 |
+|---|---|---|---|---|
+| numbers | 1, 2, 10, 11 | 10, 11, 12, 13 | 1, 10, 11, 12 | 10, 11, 12, 13 |
+
+- **Greedy** picks 1 and moves to square 2. Every number there leaves the board, so the game ends after **2 moves**.
+- **Better:** pick 2 (to square 3), then 1 (to square 4), then anything (off the board): **3 moves**.
+
+Since 3 > 2, always choosing the smallest number is not optimal. (The answer counts the final move off the board as a move. Not counting it gives 1 versus 2, so the conclusion is the same.)
+
+### (b) Dynamic programming
+
+**Subproblem.** For each index $i$, let $Hops(i)$ be the largest number of moves the player can make starting with the token on square $i$. We want $Hops(1)$.
+
+**Recurrence.** Let $d_1(i), \dots, d_4(i)$ be the numbers on square $i$.
+$$Hops(i) = \begin{cases} 0 & \text{if } i > n \\ 1 + \max\limits_{1 \le r \le 4} Hops\big(i + d_r(i)\big) & \text{otherwise} \end{cases}$$
+Each move goes strictly to the right, because all the numbers are positive, so the recursion is well-founded.
+
+**Memoization.** A one-dimensional array $Hops[1..n]$. Any index $i > n$ returns 0 without a table lookup.
+
+**Evaluation order.** $i$ from $n$ down to 1, because $Hops(i)$ only reads entries to its right.
+
+**Time.** $n$ entries with 4 options each: **$O(n)$** time and $O(n)$ space.
+
+~~~pseudo
+QuadHop(d[1..n][1..4]):
+    for i <- n down to 1
+        best <- 0
+        for r <- 1 to 4
+            j <- i + d[i][r]
+            if j <= n: best <- max(best, Hops[j])
+        Hops[i] <- 1 + best
+    return Hops[1]
+~~~
+
+> **Exam tip.** In a "prove greedy fails" part, a small concrete counterexample with both move counts written out earns full credit. A general argument is not needed.`,
+    },
+    {
+      id: 'dp-p1-quadhopper-code', type: 'code', title: 'Practice 1 · Quadhopper (code)', difficulty: 2,
+      tags: ['mt2-practice-1', 'dp'],
+      prompt: String.raw`Implement the algorithm from [Quadhopper](#/problem/dp-p1-quadhopper).
+
+<code>quadhopper(squares)</code> receives an array of $n \ge 1$ squares; <code>squares[i]</code> is an array of four positive integers (squares are 0-indexed here). The token starts on square 0. Return the largest possible number of moves, **counting** the final move that takes the token past the last square.
+
+Example: <code>quadhopper([[1,2,10,11],[10,11,12,13],[1,10,11,12],[10,11,12,13]])</code> returns 3.
+
+Aim for $O(n)$ time; the larger tests have 20,000 squares.`,
+      fn: 'quadhopper',
+      starter: 'function quadhopper(squares) {\n  // squares[i] = [a, b, c, d], four positive integers\n  // return the maximum number of moves\n}\n',
+      reference: function (squares) {
+        const n = squares.length, H = new Array(n + 1).fill(0);
+        for (let i = n - 1; i >= 0; i--) { let best = 0; for (const d of squares[i]) if (i + d < n) best = Math.max(best, H[i + d]); H[i] = 1 + best; }
+        return H[0];
+      },
+      tests: [
+        [[[1, 2, 10, 11], [10, 11, 12, 13], [1, 10, 11, 12], [10, 11, 12, 13]]],
+        [[[5, 6, 7, 8]]],
+        [[[1, 1, 1, 1], [1, 1, 1, 1], [1, 1, 1, 1]]],
+        [[[3, 1, 4, 1], [5, 9, 2, 6], [5, 3, 5, 8], [9, 7, 9, 3], [2, 3, 8, 4], [6, 2, 6, 4]]],
+        [Array.from({ length: 20000 }, (_, i) => [1 + (i * 7) % 5, 2 + (i * 3) % 4, 3, 1 + (i % 2)])],
+      ],
+      gen: () => [Array.from({ length: 1 + Math.floor(Math.random() * 15) }, () => Array.from({ length: 4 }, () => 1 + Math.floor(Math.random() * 6)))],
+      hints: [String.raw`Fill an array from right to left. An index past the end means 0 more moves.`],
+      solution: String.raw`~~~pseudo
+function quadhopper(squares) {
+  const n = squares.length, H = new Array(n + 1).fill(0);   // H[i] = most moves from square i
+  for (let i = n - 1; i >= 0; i--) {
+    let best = 0;                                           // jumping off the board: 0 more moves after this one
+    for (const d of squares[i]) if (i + d < n) best = Math.max(best, H[i + d]);
+    H[i] = 1 + best;
+  }
+  return H[0];
+}
+~~~
+$O(n)$ time. See the [written problem](#/problem/dp-p1-quadhopper) for the recurrence.`,
+    },
+    {
+      id: 'dp-p1-verbal', type: 'written', title: 'Practice Midterm 1 · Problem 4: Longest verbal subsequence', difficulty: 2,
+      tags: ['mt2-practice-1', 'dp', 'text segmentation'], code: 'dp-p1-verbal-code',
+      prompt: String.raw`Suppose you are given a string of symbols, representing a message in some foreign language that you do not understand, in an array $T[1..n]$. You have access to a black-box subroutine IsWord that can decide whether an arbitrary string $w$ is a word in $O(\lvert w \rvert)$ time.
+
+You eagerly implement and run the text-splitting algorithm from class, only to discover that the given string *cannot* be split into words! Apparently, as a crude form of cryptography, the message has been corrupted by adding extra symbols between words. So you decide instead to look for as many non-overlapping words in $T$ as possible.
+
+A ***verbal subsequence*** of $T$ is a sequence of non-overlapping substrings of $T$, each of which is a word. The *length* of a verbal subsequence is the number of words it contains. Describe and analyze an algorithm to find the length of the longest verbal subsequence of a given string $T$.
+
+For example, if IsWord accepts common English words, then (STUDY, AM, ICE, TRAP, RAMBLE) and (DYNAMIC, EXTRA, PROGRAM) are verbal subsequences of STUDYNAMICEXTRAPROGRAMBLE:
+
+<code>[STUDY] N [AM] [ICE] X [TRAP] ROG [RAMBLE]</code> and <code>STU [DYNAMIC] [EXTRA] [PROGRAM] BLE</code>
+
+So on that input your algorithm should output at least 5. (The string may contain longer verbal subsequences.)
+
+*From the official Fall 2026 Midterm 2 Practice 1.*`,
+      rubric: [
+        '(3 pts) Clear English description of the recursive function, and how to call it',
+        '(4 pts) Correct recurrence with base case: both "skip this symbol" and "a word starts here"',
+        '(1 pt) Memoization structure and evaluation order',
+        '(2 pts) Running time, including the cost of the IsWord calls',
+      ],
+      hints: [
+        String.raw`This is the text-segmentation recurrence with one extra option: the first symbol of the suffix might not belong to any word.`,
+        String.raw`Let $MaxWords(i)$ be the answer for the suffix $T[i..n]$. Either $T[i]$ is thrown away, or some word $T[i..j]$ starts at $i$.`,
+      ],
+      checks: [
+        { type: 'mc', q: String.raw`Let $MaxWords(i)$ be the length of the longest verbal subsequence of $T[i..n]$. Which recurrence is correct (for $i \le n$)?`, choices: [
+          String.raw`$\max\big\{ MaxWords(i+1),\ \max\{ 1 + MaxWords(j+1) : j \ge i,\ IsWord(T[i..j]) \} \big\}$`,
+          String.raw`$\max\{ 1 + MaxWords(j+1) : j \ge i,\ IsWord(T[i..j]) \}$`,
+          String.raw`$MaxWords(i+1) + [IsWord(T[i..n])]$`,
+          String.raw`$\max\{ MaxWords(i+1),\ 1 + MaxWords(i+1) \}$`], answer: 0,
+          explain: String.raw`Either $T[i]$ is not part of any chosen word (skip it: $MaxWords(i+1)$), or the first chosen word starts at $i$ and is $T[i..j]$ for some $j$, followed by the best answer for $T[j+1..n]$. Option B forgets the skip case, so it returns $-\infty$ whenever no word starts at $i$, which is exactly the corrupted case this problem is about.` },
+        { type: 'short', q: String.raw`Suppose the only words are <code>ab</code>, <code>ba</code> and <code>aba</code>. What is the length of the longest verbal subsequence of <code>ababa</code>?`, answer: ['2'],
+          explain: String.raw`For example ab + ab (positions 1–2 and 3–4), or ba + ba (positions 2–3 and 4–5). Three words would need at least 6 symbols, since every word has length at least 2. So the answer is **2**.` },
+        { type: 'mc', q: String.raw`What is the running time if IsWord is called directly inside the recurrence?`, choices: [String.raw`$O(n)$`, String.raw`$O(n^2)$`, String.raw`$O(n^3)$`, String.raw`$O(2^n)$`], answer: 2,
+          explain: String.raw`$n$ subproblems; each tries $O(n)$ end positions $j$; each IsWord call costs $O(j - i + 1) = O(n)$. Total $O(n^3)$. The DP itself is only $O(n^2)$ table work; the calls to the black box dominate.` },
+      ],
+      solution: String.raw`**Subproblem.** For $1 \le i \le n+1$, let $MaxWords(i)$ be the length of the longest verbal subsequence of the suffix $T[i..n]$. We want $MaxWords(1)$.
+
+**Recurrence.**
+$$MaxWords(i) = \begin{cases} 0 & \text{if } i > n \\ \max \begin{cases} MaxWords(i+1) \\ \max\big\{ 1 + MaxWords(j+1) \;:\; i \le j \le n,\ IsWord(T[i..j]) \big\} \end{cases} & \text{otherwise} \end{cases}$$
+(A max over an empty set is $-\infty$, so the first option always wins when no word starts at $i$.)
+
+*Why it is correct.* Look at the leftmost symbol $T[i]$ of the suffix. In an optimal verbal subsequence, either $T[i]$ is not covered by any word, in which case the rest is a verbal subsequence of $T[i+1..n]$, or $T[i]$ is the first symbol of the first word $T[i..j]$, and the remaining words lie inside $T[j+1..n]$, where they should be as many as possible.
+
+**Memoization.** A one-dimensional array $MaxWords[1..n+1]$.
+
+**Evaluation order.** $i$ from $n+1$ down to 1.
+
+**Time.** There are $n$ entries. Entry $i$ tries every $j$ from $i$ to $n$, and each IsWord call costs $O(j - i + 1) = O(n)$. Total: **$O(n^3)$**, with $O(n)$ space. (Precomputing a table of all IsWord answers also costs $O(n^3)$, so it does not help.)
+
+~~~pseudo
+MaxWords(T[1..n]):
+    M[n+1] <- 0
+    for i <- n down to 1
+        M[i] <- M[i+1]                       // skip T[i]
+        for j <- i to n
+            if IsWord(T[i..j]): M[i] <- max(M[i], 1 + M[j+1])
+    return M[1]
+~~~
+
+> **Warning.** Do not drop the "skip $T[i]$" option. Without it this is exactly the class algorithm, which fails on inputs that cannot be split into words.`,
+    },
+    {
+      id: 'dp-p1-verbal-code', type: 'code', title: 'Practice 1 · Longest verbal subsequence (code)', difficulty: 2,
+      tags: ['mt2-practice-1', 'dp'],
+      prompt: String.raw`Implement the algorithm from [Longest verbal subsequence](#/problem/dp-p1-verbal).
+
+<code>verbal(T, words)</code> receives a string <code>T</code> and an array <code>words</code> (the dictionary; a substring is a word exactly when it appears in this array). Return the largest number of non-overlapping substrings of <code>T</code> that are all words.
+
+Examples: <code>verbal("ababa", ["ab", "ba", "aba"])</code> returns 2; <code>verbal("xyz", ["ab"])</code> returns 0.`,
+      fn: 'verbal',
+      starter: 'function verbal(T, words) {\n  const dict = new Set(words);   // dict.has(s) plays the role of IsWord(s)\n  // return the length of the longest verbal subsequence of T\n}\n',
+      reference: function (T, words) {
+        const dict = new Set(words), n = T.length, M = new Array(n + 1).fill(0);
+        for (let i = n - 1; i >= 0; i--) { M[i] = M[i + 1]; for (let j = i; j < n; j++) if (dict.has(T.slice(i, j + 1))) M[i] = Math.max(M[i], 1 + M[j + 1]); }
+        return M[0];
+      },
+      tests: [
+        ['ababa', ['ab', 'ba', 'aba']],
+        ['xyz', ['ab']],
+        ['', ['a']],
+        ['STUDYNAMICEXTRAPROGRAMBLE', ['STUDY', 'AM', 'ICE', 'TRAP', 'RAMBLE', 'DYNAMIC', 'EXTRA', 'PROGRAM', 'A', 'I', 'RAM', 'PRO', 'GRAM', 'DY', 'NAM', 'MIC', 'RAP', 'BLE', 'AMBLE']],
+        ['aaaaaaa', ['aa', 'aaa']],
+        ['abcabcabc', ['abc', 'bca', 'cab', 'b']],
+      ],
+      gen: () => {
+        const al = 'abc', rnd = (k) => Array.from({ length: k }, () => al[Math.floor(Math.random() * 3)]).join('');
+        const words = Array.from({ length: 1 + Math.floor(Math.random() * 5) }, () => rnd(1 + Math.floor(Math.random() * 3)));
+        return [rnd(Math.floor(Math.random() * 14)), words];
+      },
+      hints: [String.raw`$M[i]$ = answer for the suffix starting at index $i$; start with $M[i] = M[i+1]$ (skip), then try every word $T[i..j]$.`],
+      solution: String.raw`~~~pseudo
+function verbal(T, words) {
+  const dict = new Set(words), n = T.length, M = new Array(n + 1).fill(0);
+  for (let i = n - 1; i >= 0; i--) {
+    M[i] = M[i + 1];                                   // T[i] is not in any word
+    for (let j = i; j < n; j++)
+      if (dict.has(T.slice(i, j + 1))) M[i] = Math.max(M[i], 1 + M[j + 1]);
+  }
+  return M[0];
+}
+~~~`,
+    },
   ],
 });

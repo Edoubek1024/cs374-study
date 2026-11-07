@@ -2180,6 +2180,200 @@ $H$ is **directed**: if $A$ is blocked by a wall and stays while $B$ moves, the 
 **(b)** Remove every diagonal vertex $(p, p)$ from $H$, together with all edges entering or leaving it. Walks in the remaining graph $H'$ are exactly the command sequences that never put both robots on the same cell (the start $(a, b)$ is not diagonal because $a \ne b$). Run BFS in $H'$ from $(a, b)$ and report $dist((t_A, t_B))$, or "impossible". Same correctness argument; time still $O(n^4)$.
 
 **(c)** A configuration is a $k$-tuple of open cells: up to $(n^2)^k = n^{2k}$ vertices, each with 4 out-edges, so BFS takes $O(n^{2k})$ time (times $O(k)$ to compute each move). For any fixed $k$ this is polynomial, but when $k$ is part of the input it is exponential: the state space genuinely grows as $n^{2k}$. (Gathering many robots this way is closely related to finding a synchronizing word for an automaton, where the "track all subsets" approach is exponential too.)`
+    },
+    {
+      id: 'graphs-p2-rainbow', type: 'written', title: 'Practice Midterm 2 · Problem 2: Rainbow walks', difficulty: 2,
+      tags: ['mt2-practice-2', 'modeling', 'reachability', 'product graph'], code: 'graphs-p2-rainbow-code',
+      prompt: String.raw`Suppose you are given a directed graph $G = (V, E)$, each of whose edges are colored red, green, or blue. Edges in $G$ do not have weights, and $G$ is not necessarily a dag. A *rainbow walk* is a walk in $G$ that does not contain two consecutive edges with the same color.
+
+Describe and analyze an algorithm to find all vertices in $G$ that are reachable from a given vertex $s$ through a rainbow walk.
+
+*From the official Fall 2026 Midterm 2 Practice 2.*`,
+      rubric: [
+        '(4 pts) Precise description of the new graph: vertices (vertex, color of the last edge) and edges',
+        '(2 pts) The algorithm run on it (whatever-first search / BFS / DFS) and from where, including the start state',
+        '(2 pts) How to read off the answer (v is reachable if some copy of v is reached, or v = s)',
+        '(2 pts) Running time O(V + E) in terms of the original graph',
+      ],
+      hints: [
+        String.raw`Whether the next edge is allowed depends on one extra piece of information besides the current vertex. What is it?`,
+        String.raw`Make three copies of each vertex: $(v, c)$ means "at $v$, and the last edge used had color $c$".`,
+      ],
+      checks: [
+        { type: 'tf', q: String.raw`It is enough to run BFS on $G$ itself, remembering for each vertex the color of the edge that first reached it, and only following edges of a different color.`, answer: false,
+          explain: String.raw`A vertex may be reachable with several different "last colors", and the first one found can block a continuation that a later one would allow. Example: $s \xrightarrow{red} a$, $s \xrightarrow{green} b \xrightarrow{blue} a$, $a \xrightarrow{red} t$. BFS reaches $a$ first by red and then refuses $a \to t$, but the walk $s \to b \to a \to t$ (green, blue, red) is a rainbow walk. You need a separate state for each (vertex, last color).` },
+        { type: 'mc', q: String.raw`In the product graph $H$, where does the edge $u \to v$ of color red create edges?`, choices: [
+          String.raw`From $(u, green)$ and $(u, blue)$, and from the start state if $u = s$, to $(v, red)$`,
+          String.raw`From $(u, red)$ to $(v, red)$`,
+          String.raw`From $(u, red)$ to $(v, green)$ and $(v, blue)$`,
+          String.raw`From every copy of $u$ to every copy of $v$`], answer: 0,
+          explain: String.raw`State $(v, red)$ means "we just used a red edge to arrive at $v$". A red edge can be taken only if the previous edge was **not** red, so it starts from $(u, green)$ or $(u, blue)$, or from the start state $(s, none)$ before any edge has been used.` },
+        { type: 'mc', q: String.raw`The running time in terms of the original graph is`, choices: [String.raw`$O(V + E)$`, String.raw`$O(E \log V)$`, String.raw`$O(VE)$`, String.raw`$O(3^V)$`], answer: 0,
+          explain: String.raw`$H$ has $3V + 1$ vertices and at most $3E$ edges (each original edge appears from at most three source states), so whatever-first search on it takes $O(V + E)$.` },
+      ],
+      solution: String.raw`**Graph.** Build a directed graph $H$:
+
+- **Vertices:** a start vertex $(s, \varnothing)$ ("no edge used yet") and, for each $v \in V$ and each color $c \in \{R, G, B\}$, a vertex $(v, c)$ meaning "at $v$, and the last edge used had color $c$". That is $3V + 1$ vertices.
+- **Edges:** for each edge $u \to v$ of color $c$ in $G$:
+  - for each color $c' \ne c$, an edge $(u, c') \to (v, c)$;
+  - if $u = s$, an edge $(s, \varnothing) \to (v, c)$.
+
+  That is at most $3E$ edges.
+
+**Claim.** Walks in $H$ that start at $(s, \varnothing)$ correspond exactly to rainbow walks in $G$ that start at $s$. A walk in $H$ ending at $(v, c)$ projects to a rainbow walk ending at $v$ whose last edge has color $c$. Conversely, each step of a rainbow walk is allowed by construction, because consecutive edges differ in color.
+
+**Algorithm.** Run whatever-first search (BFS or DFS) in $H$ from $(s, \varnothing)$. Output $s$ together with every vertex $v$ such that at least one of $(v, R)$, $(v, G)$, $(v, B)$ was marked.
+
+**Time.** Building $H$ takes $O(V + E)$; searching it takes $O(\lvert V(H) \rvert + \lvert E(H) \rvert) = O(V + E)$. Total: **$O(V + E)$**.
+
+> **Exam tip.** In state-space (product graph) problems, say in words what a vertex of the new graph *means*. That sentence is worth points by itself, and it makes the edges easy to justify.`,
+    },
+    {
+      id: 'graphs-p2-rainbow-code', type: 'code', title: 'Practice 2 · Rainbow walks (code)', difficulty: 2,
+      tags: ['mt2-practice-2', 'product graph'],
+      prompt: String.raw`Implement the algorithm from [Rainbow walks](#/problem/graphs-p2-rainbow).
+
+<code>rainbowReach(n, edges, s)</code>: vertices are <code>0..n-1</code>; each edge is <code>[u, v, c]</code> with color <code>c</code> one of <code>"r"</code>, <code>"g"</code>, <code>"b"</code> (directed $u \to v$). Return the **sorted** array of all vertices reachable from <code>s</code> by a rainbow walk, including <code>s</code> itself.
+
+Example: <code>rainbowReach(4, [[0,1,"r"],[0,2,"g"],[2,1,"b"],[1,3,"r"]], 0)</code> returns <code>[0, 1, 2, 3]</code>. BFS that only remembers the first color used to reach each vertex misses vertex 3.`,
+      fn: 'rainbowReach',
+      starter: 'function rainbowReach(n, edges, s) {\n  // edges: [u, v, color] with color in "r", "g", "b"\n  // return the sorted list of vertices reachable from s by a rainbow walk\n}\n',
+      reference: function (n, edges, s) {
+        const C = { r: 0, g: 1, b: 2 }, out = Array.from({ length: n }, () => []);
+        for (const [u, v, c] of edges) out[u].push([v, C[c]]);
+        const seen = Array.from({ length: n }, () => [false, false, false, false]); // index 3 = no edge yet
+        const q = [[s, 3]]; seen[s][3] = true;
+        while (q.length) { const [u, last] = q.shift(); for (const [v, c] of out[u]) if (c !== last && !seen[v][c]) { seen[v][c] = true; q.push([v, c]); } }
+        const res = []; for (let v = 0; v < n; v++) if (v === s || seen[v][0] || seen[v][1] || seen[v][2]) res.push(v);
+        return res;
+      },
+      tests: [
+        [4, [[0, 1, 'r'], [0, 2, 'g'], [2, 1, 'b'], [1, 3, 'r']], 0],
+        [3, [[0, 1, 'r'], [1, 2, 'r']], 0],
+        [3, [[0, 1, 'r'], [1, 0, 'g'], [1, 2, 'g']], 0],
+        [5, [[0, 1, 'b'], [1, 2, 'b'], [1, 3, 'g'], [3, 1, 'r'], [1, 4, 'b']], 0],
+        [1, [], 0],
+      ],
+      gen: () => {
+        const n = 1 + Math.floor(Math.random() * 8), m = Math.floor(Math.random() * 16), cs = 'rgb';
+        const edges = Array.from({ length: m }, () => [Math.floor(Math.random() * n), Math.floor(Math.random() * n), cs[Math.floor(Math.random() * 3)]]);
+        return [n, edges, Math.floor(Math.random() * n)];
+      },
+      hints: [String.raw`Search over pairs (vertex, color of the last edge), with a special "no edge yet" color for the start.`],
+      solution: String.raw`~~~pseudo
+function rainbowReach(n, edges, s) {
+  const C = { r: 0, g: 1, b: 2 }, out = Array.from({ length: n }, () => []);
+  for (const [u, v, c] of edges) out[u].push([v, C[c]]);
+  const seen = Array.from({ length: n }, () => [false, false, false, false]);  // [3] = "no edge yet"
+  const q = [[s, 3]]; seen[s][3] = true;
+  while (q.length) {
+    const [u, last] = q.shift();
+    for (const [v, c] of out[u])
+      if (c !== last && !seen[v][c]) { seen[v][c] = true; q.push([v, c]); }
+  }
+  const res = [];
+  for (let v = 0; v < n; v++) if (v === s || seen[v][0] || seen[v][1] || seen[v][2]) res.push(v);
+  return res;
+}
+~~~`,
+    },
+    {
+      id: 'graphs-p3-remote', type: 'written', title: 'Practice Midterm 3 · Problem 3: Minimum remoteness', difficulty: 2,
+      tags: ['mt2-practice-3', 'bfs', 'multi-source'], code: 'graphs-p3-remote-code',
+      prompt: String.raw`Suppose you are given a directed graph $G = (V, E)$, whose vertices are either red, green, or blue. Edges in $G$ do not have weights, and $G$ is not necessarily a dag. The ***remoteness*** of a vertex $v$ is the *maximum* of three shortest-path lengths:
+
+- the length of a shortest path to $v$ from the closest red vertex;
+- the length of a shortest path to $v$ from the closest blue vertex;
+- the length of a shortest path to $v$ from the closest green vertex.
+
+In particular, if $v$ is not reachable from vertices of all three colors, then $v$ is infinitely remote. Describe and analyze an algorithm to find a vertex of $G$ with *minimum* remoteness.
+
+*From the official Fall 2026 Midterm 2 Practice 3.*`,
+      rubric: [
+        '(4 pts) Compute, for each color, the distance from the nearest vertex of that color to every vertex (multi-source BFS or a super-source)',
+        '(2 pts) Combine: remoteness(v) = max of the three distances; return a vertex minimizing it',
+        '(2 pts) Correctness of the multi-source idea',
+        '(2 pts) Running time O(V + E)',
+      ],
+      hints: [
+        String.raw`"The distance from the closest red vertex" is one shortest-path computation, not one per red vertex.`,
+        String.raw`Add a new vertex $r^*$ with an edge to every red vertex, and run BFS from $r^*$. Subtract 1 from each distance.`,
+      ],
+      checks: [
+        { type: 'mc', q: String.raw`How many breadth-first searches does an efficient solution need?`, choices: [String.raw`3, one per color (each from a super-source, or starting with all vertices of that color at distance 0)`, String.raw`$V$, one from each vertex`, String.raw`1, from an arbitrary vertex`, String.raw`$3V$, one per (vertex, color) pair`], answer: 0,
+          explain: String.raw`A super-source $r^*$ with an edge to every red vertex turns "distance from the closest red vertex" into a single-source problem (subtract 1). Equivalently, start BFS with all red vertices in the queue at distance 0. Do the same for green and blue: 3 BFS runs in total.` },
+        { type: 'tf', q: String.raw`A red vertex has distance 0 from the closest red vertex.`, answer: true,
+          explain: String.raw`It is its own closest red vertex, with the empty path. Multi-source BFS gets this automatically by starting every red vertex at distance 0.` },
+        { type: 'mc', q: String.raw`The total running time is`, choices: [String.raw`$O(V + E)$`, String.raw`$O(E \log V)$`, String.raw`$O(V(V + E))$`, String.raw`$O(V^3)$`], answer: 0,
+          explain: String.raw`Three BFS runs on a graph with $V + 1$ vertices and at most $E + V$ edges, plus an $O(V)$ scan for the minimum: $O(V + E)$. Running a BFS from every vertex would take $O(V(V + E))$.` },
+      ],
+      solution: String.raw`**Algorithm.**
+
+1. For each color $c \in \{\text{red}, \text{green}, \text{blue}\}$: build $G_c$ by adding a new vertex $z_c$ and an edge $z_c \to x$ for every vertex $x$ of color $c$. Run BFS in $G_c$ from $z_c$, and set $d_c(v) = dist_{G_c}(z_c, v) - 1$ (or $\infty$ if $v$ is not reached).
+   - Equivalently, run BFS in $G$ with every vertex of color $c$ placed in the queue at distance 0.
+2. For each vertex $v$, compute $remote(v) = \max\{ d_{red}(v), d_{green}(v), d_{blue}(v) \}$.
+3. Return a vertex with the smallest $remote(v)$ (if every vertex is infinitely remote, any vertex is an answer).
+
+**Correctness.** Every path from $z_c$ to $v$ has the form $z_c \to x \leadsto v$ for some vertex $x$ of color $c$, and its length is one more than the length of the path $x \leadsto v$ in $G$. So $dist(z_c, v) - 1 = \min_{x \text{ of color } c} dist_G(x, v)$, which is exactly the distance from the closest vertex of color $c$. Step 2 is the definition of remoteness.
+
+**Time.** Each $G_c$ has $V + 1$ vertices and at most $E + V$ edges, so each BFS takes $O(V + E)$. The final scan takes $O(V)$. Total: **$O(V + E)$**.
+
+> **Warning.** Running a BFS from every red vertex separately costs $O(V(V+E))$. The super-source trick is the whole point of this problem.`,
+    },
+    {
+      id: 'graphs-p3-remote-code', type: 'code', title: 'Practice 3 · Minimum remoteness (code)', difficulty: 2,
+      tags: ['mt2-practice-3', 'bfs'],
+      prompt: String.raw`Implement the algorithm from [Minimum remoteness](#/problem/graphs-p3-remote).
+
+<code>minRemoteness(n, edges, color)</code>: vertices are <code>0..n-1</code>, <code>edges</code> are directed pairs <code>[u, v]</code>, and <code>color[v]</code> is <code>"r"</code>, <code>"g"</code> or <code>"b"</code>. Return the **minimum remoteness** over all vertices (a number), or <code>-1</code> if every vertex is infinitely remote.
+
+Example: <code>minRemoteness(3, [[0,1],[1,2]], ["r","g","b"])</code> returns 2 (vertex 2 is at distances 2, 1, 0 from the closest red, green and blue vertices).`,
+      fn: 'minRemoteness',
+      starter: 'function minRemoteness(n, edges, color) {\n  // return the smallest remoteness, or -1 if all are infinite\n}\n',
+      reference: function (n, edges, color) {
+        const out = Array.from({ length: n }, () => []);
+        for (const [u, v] of edges) out[u].push(v);
+        const bfs = (c) => {
+          const d = new Array(n).fill(Infinity), q = [];
+          for (let v = 0; v < n; v++) if (color[v] === c) { d[v] = 0; q.push(v); }
+          for (let h = 0; h < q.length; h++) { const u = q[h]; for (const v of out[u]) if (d[v] === Infinity) { d[v] = d[u] + 1; q.push(v); } }
+          return d;
+        };
+        const R = bfs('r'), G = bfs('g'), B = bfs('b');
+        let best = Infinity;
+        for (let v = 0; v < n; v++) best = Math.min(best, Math.max(R[v], G[v], B[v]));
+        return best === Infinity ? -1 : best;
+      },
+      tests: [
+        [3, [[0, 1], [1, 2]], ['r', 'g', 'b']],
+        [3, [], ['r', 'g', 'b']],
+        [4, [[0, 3], [1, 3], [2, 3], [3, 0]], ['r', 'g', 'b', 'r']],
+        [6, [[0, 1], [1, 2], [2, 0], [3, 4], [4, 5], [5, 2], [2, 5]], ['r', 'r', 'g', 'b', 'b', 'g']],
+      ],
+      gen: () => {
+        const n = 1 + Math.floor(Math.random() * 9), m = Math.floor(Math.random() * 18), cs = 'rgb';
+        return [n, Array.from({ length: m }, () => [Math.floor(Math.random() * n), Math.floor(Math.random() * n)]), Array.from({ length: n }, () => cs[Math.floor(Math.random() * 3)])];
+      },
+      hints: [String.raw`Three multi-source BFS runs: put every vertex of one color in the queue at distance 0.`],
+      solution: String.raw`~~~pseudo
+function minRemoteness(n, edges, color) {
+  const out = Array.from({ length: n }, () => []);
+  for (const [u, v] of edges) out[u].push(v);
+  const bfs = (c) => {                                   // multi-source BFS from all vertices of color c
+    const d = new Array(n).fill(Infinity), q = [];
+    for (let v = 0; v < n; v++) if (color[v] === c) { d[v] = 0; q.push(v); }
+    for (let h = 0; h < q.length; h++) {
+      const u = q[h];
+      for (const v of out[u]) if (d[v] === Infinity) { d[v] = d[u] + 1; q.push(v); }
     }
-  ]
+    return d;
+  };
+  const R = bfs('r'), G = bfs('g'), B = bfs('b');
+  let best = Infinity;
+  for (let v = 0; v < n; v++) best = Math.min(best, Math.max(R[v], G[v], B[v]));
+  return best === Infinity ? -1 : best;
+}
+~~~`,
+    },
+  ],
 });

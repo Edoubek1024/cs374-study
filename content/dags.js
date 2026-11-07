@@ -2339,6 +2339,206 @@ Evaluate in topological order of $H$ (for Kosaraju–Sharir, the reverse of the 
 *Claim: the groups of $\mathcal P$ containing $C_1, \dots, C_k$ form contiguous blocks along the path.* Suppose $C_i$ and $C_j$ ($i < j$) lie in the same group $X$ but some $C_l$ with $i < l < j$ lies in a different group $Y$. The path segment from $C_i$ to $C_l$ gives a group-graph walk $X \leadsto Y$, and the segment from $C_l$ to $C_j$ gives a walk $Y \leadsto X$, both nonempty since $X \ne Y$: a cycle in the group graph, contradicting validity.
 
 So the path passes through distinct groups $X_1, X_2, \dots, X_r$ in this order, each consecutive pair joined by a group-graph edge (from the path edge where the block changes). Hence $X_{i+1}$ cannot start before $X_i$ finishes, and $X_r$ finishes no earlier than $\sum_i time(X_i)$. Each block's time is at least the total of the path components it contains, and the blocks partition $C_1, \dots, C_k$, so $\sum_i time(X_i) \ge W$. Therefore $\mathcal P$ finishes no earlier than $W$, which is what the SCC partition achieves. ∎`
-    }
-  ]
+    },
+    {
+      id: 'dags-p2-structures', type: 'written', title: 'Practice Midterm 2 · Problem 1: Find the structures', difficulty: 1,
+      tags: ['mt2-practice-2', 'dfs', 'bfs', 'shortest paths', 'topological sort'],
+      prompt: String.raw`***Clearly*** indicate the following structures in the directed graph below. To indicate a subset of edges, draw a heavy line along each edge. If the requested structure does not exist, write NONE.
+
+~~~graph
+directed
+t u 4
+t v 3
+t x 6
+t y 2
+v u 2
+u x 1
+u w 5
+u z 4
+v w 6
+v z -2
+w y 2
+w z 4
+z y -7
+y x 2
+z x 1
+~~~
+
+- **(a)** A depth-first search tree rooted at $v$
+- **(b)** A breadth-first search tree rooted at $w$
+- **(c)** A shortest-path tree rooted at $t$
+- **(d)** A list of vertices in topological order
+
+*From the official Fall 2026 Midterm 2 Practice 2. The graph is redrawn from the handout; its 15 edges are:* $t{\to}u\ 4$, $t{\to}v\ 3$, $t{\to}x\ 6$, $t{\to}y\ 2$, $v{\to}u\ 2$, $u{\to}x\ 1$, $u{\to}w\ 5$, $u{\to}z\ 4$, $v{\to}w\ 6$, $v{\to}z\ {-2}$, $w{\to}y\ 2$, $w{\to}z\ 4$, $z{\to}y\ {-7}$, $y{\to}x\ 2$, $z{\to}x\ 1$. *If your copy of the figure differs from this list, trust your copy.*`,
+      rubric: [
+        '(2 pts) (a) A valid DFS tree from v: spans exactly the vertices reachable from v, and every non-tree edge is consistent with some DFS order',
+        '(3 pts) (b) A valid BFS tree from w: spans the vertices reachable from w, with each vertex at its correct BFS depth',
+        '(3 pts) (c) A correct shortest-path tree from t (negative edges are fine here because the graph is a DAG)',
+        '(2 pts) (d) A correct topological order',
+      ],
+      hints: [
+        String.raw`Check first whether the graph has a cycle. If it is a DAG, (d) exists and (c) can be computed by dynamic programming in topological order, negative edges and all.`,
+        String.raw`Only vertices reachable from the root belong in a search tree.`,
+      ],
+      checks: [
+        { type: 'short', q: String.raw`Give the topological order, as a string of vertex names (for example <code>tuvwxyz</code>).`, answer: ['tvuwzyx', 't,v,u,w,z,y,x', 't v u w z y x'],
+          explain: String.raw`$t$ is the only source. Next $v$ must come before $u$ (edge $v \to u$), $u$ before $w$, $w$ before $z$, $z$ before $y$, and $y$ before $x$. Since $t \to v \to u \to w \to z \to y \to x$ is a path through every vertex, this order **t v u w z y x** is the **only** topological order.` },
+        { type: 'short', q: String.raw`What is $dist(t, x)$, the length of a shortest path from $t$ to $x$?`, answer: ['-4', '−4'],
+          explain: String.raw`In topological order: $d(t) = 0$, $d(v) = 3$, $d(u) = \min(4, 3 + 2) = 4$, $d(w) = \min(4 + 5, 3 + 6) = 9$, $d(z) = \min(4 + 4, 3 - 2, 9 + 4) = 1$, $d(y) = \min(2, 9 + 2, 1 - 7) = -6$, $d(x) = \min(6, 4 + 1, -6 + 2, 1 + 1) = \mathbf{-4}$, via $t \to v \to z \to y \to x$.` },
+        { type: 'mc', q: String.raw`In the shortest-path tree rooted at $t$, what is the parent of $y$?`, choices: [String.raw`$t$`, String.raw`$w$`, String.raw`$z$`, String.raw`$x$`], answer: 2,
+          explain: String.raw`$d(y) = d(z) + \ell(z \to y) = 1 - 7 = -6$, which beats the direct edge $t \to y$ of length 2. So $y$'s parent is $z$. (The direct edge is a trap: with negative edges, one hop is not necessarily the shortest.)` },
+        { type: 'multi', q: String.raw`Which vertices does a breadth-first search from $w$ reach? (select all that apply)`, choices: ['t', 'u', 'v', 'x', 'y', 'z'], answer: [3, 4, 5],
+          explain: String.raw`$w$'s out-edges go to $y$ and $z$ (depth 1), and both lead to $x$ (depth 2). Nothing reaches back to $t$, $u$ or $v$. The BFS tree is $w \to y$, $w \to z$, plus one of $y \to x$ or $z \to x$.` },
+        { type: 'tf', q: String.raw`Running Dijkstra's algorithm from $t$ on this graph would compute correct distances.`, answer: false,
+          explain: String.raw`Dijkstra extracts $y$ early, with tentative distance 2 from the edge $t \to y$, and never revisits it, so it misses the $-6$ path through $z \to y$ (weight $-7$). For a DAG, the correct tool is the dynamic program over a topological order, which handles negative edges in $O(V + E)$ time.` },
+      ],
+      solution: String.raw`**First, is it a DAG?** Yes. The order $t, v, u, w, z, y, x$ puts every edge forward (check: $t \to$ everything, $v \to u, w, z$; $u \to w, z, x$; $w \to z, y$; $z \to y, x$; $y \to x$). So (d) exists, and in (c) the negative edges cause no trouble.
+
+### (a) DFS tree rooted at $v$
+
+$v$ reaches $u, w, x, y, z$ but not $t$. One valid DFS (neighbors in alphabetical order): $v \to u$, $u \to w$, $w \to y$, $y \to x$, then back up to $w$ and $w \to z$.
+
+**Tree edges:** $v{\to}u,\ u{\to}w,\ w{\to}y,\ y{\to}x,\ w{\to}z$.
+
+Other DFS trees are also correct if they come from some order of visiting neighbors. For example, starting $v \to z$ first gives $v{\to}z$, $z{\to}x$, $z{\to}y$, $v{\to}u$, $u{\to}w$.
+
+### (b) BFS tree rooted at $w$
+
+$w$ reaches only $y, z$ (depth 1) and $x$ (depth 2).
+
+**Tree edges:** $w{\to}y,\ w{\to}z$, and one of $y{\to}x$ or $z{\to}x$.
+
+### (c) Shortest-path tree rooted at $t$
+
+Process the vertices in topological order, relaxing each vertex's out-edges:
+
+| vertex | $t$ | $v$ | $u$ | $w$ | $z$ | $y$ | $x$ |
+|---|---|---|---|---|---|---|---|
+| distance | 0 | 3 | 4 | 9 | 1 | $-6$ | $-4$ |
+| parent | — | $t$ | $t$ | $u$ or $v$ (tie) | $v$ | $z$ | $y$ |
+
+**Tree edges:** $t{\to}v,\ t{\to}u,\ u{\to}w$ (or $v{\to}w$),$\ v{\to}z,\ z{\to}y,\ y{\to}x$.
+
+### (d) Topological order
+
+$t, v, u, w, z, y, x$. It is the **only** topological order, because consecutive vertices are joined by edges ($t{\to}v{\to}u{\to}w{\to}z{\to}y{\to}x$ is a Hamiltonian path).
+
+> **Exam tip.** Before drawing a shortest-path tree, look at the edge signs. A negative edge means you cannot use Dijkstra. A DAG means you can simply relax in topological order. A negative **cycle** reachable from the root would mean the tree does not exist.`,
+    },
+    {
+      id: 'dags-p2-burgoo', type: 'written', title: 'Practice Midterm 2 · Problem 5: Speed-running a degree', difficulty: 3,
+      tags: ['mt2-practice-2', 'dag', 'longest path', 'scheduling'], code: 'dags-p2-burgoo-code',
+      prompt: String.raw`You decide to complete your degree at Burgoo Polytechnic. Burgoo has an extremely rigid CS program: there is a single set of classes that *all* CS majors *must* take, and prerequisites are strictly enforced. On the other hand, the classes are easy and there is no limit on the number of classes you can take in a single term. You rationally decide to speed-run your degree, but how?
+
+**(a)** Suppose you are given a directed acyclic graph $G = (V, E)$, where every vertex represents a required class and each edge $u \to v$ indicates that class $u$ must be completed before you can begin class $v$. Describe an algorithm that computes a class schedule that uses the minimum number of terms; for each required class, the output of your algorithm should specify the term when you will take that class.
+
+**(b)** Burgoo relaxes its degree requirements due to massive overcrowding. Describe an algorithm that computes the minimum number of terms required to take ***at least 75%*** of the classes represented in $G$, while still obeying all prerequisite constraints. *[Hint: Use the output of your algorithm for part (a).]*
+
+*From the official Fall 2026 Midterm 2 Practice 2 (story shortened).*`,
+      rubric: [
+        '(2 pts) (a) Define term(v) as 1 + the max term of its prerequisites (the number of vertices on a longest path ending at v)',
+        '(2 pts) (a) Compute it in topological order in O(V + E); output term(v) for every class',
+        '(1 pt) (a) Argue optimality: no schedule can put v earlier than term(v)',
+        '(3 pts) (b) Observe that in T terms you can take exactly the classes with term(v) <= T',
+        '(2 pts) (b) Return the smallest T for which that count is at least 0.75 V; running time',
+      ],
+      hints: [
+        String.raw`Class $v$ cannot be taken before every class on any prerequisite chain ending at $v$ has been taken, one per term.`,
+        String.raw`For (b): if you are allowed $T$ terms, which classes can you possibly take, and can you take all of them at once?`,
+      ],
+      checks: [
+        { type: 'mc', q: String.raw`In the optimal schedule for (a), class $v$ is taken in term`, choices: [
+          String.raw`The number of vertices on a **longest** path that ends at $v$ (so term 1 if $v$ has no prerequisites)`,
+          String.raw`1 + the number of edges on a shortest path from a source to $v$`,
+          String.raw`The position of $v$ in an arbitrary topological order`,
+          String.raw`1 + the number of prerequisites of $v$`], answer: 0,
+          explain: String.raw`$term(v) = 1 + \max\{ term(u) : u \to v \}$, or 1 when $v$ has no prerequisites: the length (in vertices) of the longest prerequisite chain ending at $v$. Shortest paths are wrong because the **longest** chain is what forces the delay. Position in a topological order is too pessimistic, since it schedules one class per term.` },
+        { type: 'short', q: String.raw`The classes are $a \to b \to c$ (a chain) plus an isolated class $d$. How many terms are needed to take at least 75% of the classes?`, answer: ['2'],
+          explain: String.raw`The terms are $term(a) = term(d) = 1$, $term(b) = 2$, $term(c) = 3$. 75% of 4 classes is 3 classes. With $T = 1$ you can take 2 classes ($a, d$); with $T = 2$ you can take 3 ($a, b, d$). So the answer is **2**.` },
+        { type: 'mc', q: String.raw`Both parts together run in`, choices: [String.raw`$O(V + E)$`, String.raw`$O(E \log V)$`, String.raw`$O(VE)$`, String.raw`$O(2^V)$`], answer: 0,
+          explain: String.raw`A topological sort plus one pass of relaxations computes every $term(v)$ in $O(V + E)$. Counting how many classes have each term value and scanning prefix sums takes $O(V)$.` },
+      ],
+      solution: String.raw`### (a) Minimum-term schedule
+
+For each class $v$, define
+$$term(v) = \begin{cases} 1 & \text{if } v \text{ has no prerequisites} \\ 1 + \max\{ term(u) : u \to v \in E \} & \text{otherwise.} \end{cases}$$
+Equivalently, $term(v)$ is the number of vertices on a longest path in $G$ that ends at $v$.
+
+**Algorithm.** Topologically sort $G$. Process the vertices in that order, computing $term(v)$ from its already-computed in-neighbors (or, symmetrically, push $term(u) + 1$ forward along each edge $u \to v$). Output $term(v)$ for every class. The number of terms used is $\max_v term(v)$.
+
+**Correctness.**
+
+- *The schedule is valid.* For every edge $u \to v$, $term(v) \ge term(u) + 1$, so $u$ is finished before $v$ starts.
+- *It is optimal.* If $v_1 \to v_2 \to \dots \to v_k = v$ is any prerequisite chain, any valid schedule puts the $v_i$ in strictly increasing terms, so $v$ is taken in term $k$ or later. Applied to a longest chain, this shows no schedule can take $v$ before $term(v)$. In particular, no schedule uses fewer than $\max_v term(v)$ terms.
+
+**Time.** $O(V + E)$ for the topological sort and the DP.
+
+### (b) At least 75% of the classes
+
+**Key fact.** Using at most $T$ terms, the set of classes you can take is exactly $\{ v : term(v) \le T \}$.
+
+- *You can take all of these.* Take each such $v$ in term $term(v)$. Every prerequisite $u$ of $v$ has $term(u) < term(v) \le T$, so it is also in the set and is taken earlier.
+- *You cannot take any other class.* If $term(v) > T$, then by part (a) no valid schedule finishes $v$ within $T$ terms.
+
+**Algorithm.** Compute $term(v)$ for all $v$ as in (a). Count $N[k] = \lvert\{ v : term(v) = k \}\rvert$ for each $k$. Scan $T = 1, 2, \dots$, keeping the running sum $N[1] + \dots + N[T]$, and return the first $T$ where the sum is at least $\lceil 0.75\, V \rceil$.
+
+**Time.** $O(V + E)$ for part (a), plus $O(V)$ for the counting and the scan: **$O(V + E)$**.`,
+    },
+    {
+      id: 'dags-p2-burgoo-code', type: 'code', title: 'Practice 2 · Speed-running a degree (code)', difficulty: 2,
+      tags: ['mt2-practice-2', 'dag', 'longest path'],
+      prompt: String.raw`Implement both parts of [Speed-running a degree](#/problem/dags-p2-burgoo).
+
+<code>speedRun(n, edges)</code>: classes are <code>0..n-1</code> ($n \ge 1$), and each pair <code>[u, v]</code> means $u$ must be completed before $v$. The graph is a DAG. Return <code>[allTerms, terms75]</code>, where <code>allTerms</code> is the minimum number of terms to take every class, and <code>terms75</code> is the minimum number of terms to take at least <code>Math.ceil(0.75 * n)</code> classes.
+
+Example: <code>speedRun(4, [[0,1],[1,2]])</code> returns <code>[3, 2]</code>.`,
+      fn: 'speedRun',
+      starter: 'function speedRun(n, edges) {\n  // return [minimum terms for all classes, minimum terms for at least 75% of them]\n}\n',
+      reference: function (n, edges) {
+        const out = Array.from({ length: n }, () => []), indeg = new Array(n).fill(0);
+        for (const [u, v] of edges) { out[u].push(v); indeg[v]++; }
+        const term = new Array(n).fill(1), q = [];
+        for (let v = 0; v < n; v++) if (!indeg[v]) q.push(v);
+        for (let h = 0; h < q.length; h++) { const u = q[h]; for (const v of out[u]) { term[v] = Math.max(term[v], term[u] + 1); if (--indeg[v] === 0) q.push(v); } }
+        const maxT = Math.max(...term), cnt = new Array(maxT + 2).fill(0);
+        for (const t of term) cnt[t]++;
+        const need = Math.ceil(0.75 * n); let sum = 0, T = 0;
+        while (sum < need) { T++; sum += cnt[T]; }
+        return [maxT, T];
+      },
+      tests: [
+        [4, [[0, 1], [1, 2]]],
+        [1, []],
+        [4, [[0, 1], [1, 2], [2, 3]]],
+        [8, [[0, 2], [1, 2], [2, 3], [3, 4], [4, 5], [0, 6], [6, 7]]],
+        [5, [[0, 4], [1, 4], [2, 4], [3, 4]]],
+      ],
+      gen: () => {
+        const n = 1 + Math.floor(Math.random() * 10), edges = [];
+        for (let u = 0; u < n; u++) for (let v = u + 1; v < n; v++) if (Math.random() < 0.25) edges.push([u, v]);
+        // relabel vertices randomly so the input is not already topologically sorted
+        const p = Array.from({ length: n }, (_, i) => i).sort(() => Math.random() - 0.5);
+        return [n, edges.map(([u, v]) => [p[u], p[v]])];
+      },
+      hints: [String.raw`Compute term(v) = 1 + max term of its prerequisites in a topological order (Kahn's algorithm works well), then count classes by term.`],
+      solution: String.raw`~~~pseudo
+function speedRun(n, edges) {
+  const out = Array.from({ length: n }, () => []), indeg = new Array(n).fill(0);
+  for (const [u, v] of edges) { out[u].push(v); indeg[v]++; }
+  const term = new Array(n).fill(1), q = [];
+  for (let v = 0; v < n; v++) if (!indeg[v]) q.push(v);
+  for (let h = 0; h < q.length; h++) {                 // Kahn's algorithm = topological order
+    const u = q[h];
+    for (const v of out[u]) { term[v] = Math.max(term[v], term[u] + 1); if (--indeg[v] === 0) q.push(v); }
+  }
+  const maxT = Math.max(...term), cnt = new Array(maxT + 2).fill(0);
+  for (const t of term) cnt[t]++;
+  const need = Math.ceil(0.75 * n);
+  let sum = 0, T = 0;
+  while (sum < need) { T++; sum += cnt[T]; }
+  return [maxT, T];
+}
+~~~`,
+    },
+  ],
 });
